@@ -1,0 +1,1783 @@
+programa,metrica,mes,valor,origem
+6h às 24h,Audiência,2020-01,12.768902,DEMO fictício
+6h às 24h,Share,2020-01,35.205725,DEMO fictício
+6h às 24h,Audiência,2020-02,13.106846,DEMO fictício
+6h às 24h,Share,2020-02,37.073289,DEMO fictício
+6h às 24h,Audiência,2020-03,13.266698,DEMO fictício
+6h às 24h,Share,2020-03,38.073368,DEMO fictício
+6h às 24h,Audiência,2020-04,13.921839,DEMO fictício
+6h às 24h,Share,2020-04,36.928798,DEMO fictício
+6h às 24h,Audiência,2020-05,14.56006,DEMO fictício
+6h às 24h,Share,2020-05,38.286312,DEMO fictício
+6h às 24h,Audiência,2020-06,14.500261,DEMO fictício
+6h às 24h,Share,2020-06,37.855518,DEMO fictício
+6h às 24h,Audiência,2020-07,14.408177,DEMO fictício
+6h às 24h,Share,2020-07,38.980317,DEMO fictício
+6h às 24h,Audiência,2020-08,14.46028,DEMO fictício
+6h às 24h,Share,2020-08,39.086741,DEMO fictício
+6h às 24h,Audiência,2020-09,14.019222,DEMO fictício
+6h às 24h,Share,2020-09,39.647746,DEMO fictício
+6h às 24h,Audiência,2020-10,14.643415,DEMO fictício
+6h às 24h,Share,2020-10,38.626296,DEMO fictício
+6h às 24h,Audiência,2020-11,14.386218,DEMO fictício
+6h às 24h,Share,2020-11,37.500934,DEMO fictício
+6h às 24h,Audiência,2020-12,14.570812,DEMO fictício
+6h às 24h,Share,2020-12,37.654167,DEMO fictício
+6h às 24h,Audiência,2021-01,13.622112,DEMO fictício
+6h às 24h,Share,2021-01,36.585416,DEMO fictício
+6h às 24h,Audiência,2021-02,13.722319,DEMO fictício
+6h às 24h,Share,2021-02,37.317459,DEMO fictício
+6h às 24h,Audiência,2021-03,14.303683,DEMO fictício
+6h às 24h,Share,2021-03,38.603161,DEMO fictício
+6h às 24h,Audiência,2021-04,14.939589,DEMO fictício
+6h às 24h,Share,2021-04,38.357949,DEMO fictício
+6h às 24h,Audiência,2021-05,16.658266,DEMO fictício
+6h às 24h,Share,2021-05,37.681065,DEMO fictício
+6h às 24h,Audiência,2021-06,15.639317,DEMO fictício
+6h às 24h,Share,2021-06,38.467133,DEMO fictício
+6h às 24h,Audiência,2021-07,15.44918,DEMO fictício
+6h às 24h,Share,2021-07,38.572182,DEMO fictício
+6h às 24h,Audiência,2021-08,15.292152,DEMO fictício
+6h às 24h,Share,2021-08,37.189829,DEMO fictício
+6h às 24h,Audiência,2021-09,14.83072,DEMO fictício
+6h às 24h,Share,2021-09,38.123792,DEMO fictício
+6h às 24h,Audiência,2021-10,14.651553,DEMO fictício
+6h às 24h,Share,2021-10,38.245341,DEMO fictício
+6h às 24h,Audiência,2021-11,14.096658,DEMO fictício
+6h às 24h,Share,2021-11,37.557968,DEMO fictício
+6h às 24h,Audiência,2021-12,13.349313,DEMO fictício
+6h às 24h,Share,2021-12,36.923813,DEMO fictício
+6h às 24h,Audiência,2022-01,13.833997,DEMO fictício
+6h às 24h,Share,2022-01,38.574969,DEMO fictício
+6h às 24h,Audiência,2022-02,13.41557,DEMO fictício
+6h às 24h,Share,2022-02,37.201402,DEMO fictício
+6h às 24h,Audiência,2022-03,12.969267,DEMO fictício
+6h às 24h,Share,2022-03,37.028567,DEMO fictício
+6h às 24h,Audiência,2022-04,13.732827,DEMO fictício
+6h às 24h,Share,2022-04,38.454162,DEMO fictício
+6h às 24h,Audiência,2022-05,14.536489,DEMO fictício
+6h às 24h,Share,2022-05,39.526787,DEMO fictício
+6h às 24h,Audiência,2022-06,15.167771,DEMO fictício
+6h às 24h,Share,2022-06,39.008989,DEMO fictício
+6h às 24h,Audiência,2022-07,16.404375,DEMO fictício
+6h às 24h,Share,2022-07,38.111616,DEMO fictício
+6h às 24h,Audiência,2022-08,16.086871,DEMO fictício
+6h às 24h,Share,2022-08,38.086801,DEMO fictício
+6h às 24h,Audiência,2022-09,15.839967,DEMO fictício
+6h às 24h,Share,2022-09,38.061384,DEMO fictício
+6h às 24h,Audiência,2022-10,15.118353,DEMO fictício
+6h às 24h,Share,2022-10,36.715268,DEMO fictício
+6h às 24h,Audiência,2022-11,14.893301,DEMO fictício
+6h às 24h,Share,2022-11,37.23885,DEMO fictício
+6h às 24h,Audiência,2022-12,14.229423,DEMO fictício
+6h às 24h,Share,2022-12,38.392827,DEMO fictício
+6h às 24h,Audiência,2023-01,14.946543,DEMO fictício
+6h às 24h,Share,2023-01,36.106458,DEMO fictício
+6h às 24h,Audiência,2023-02,15.365691,DEMO fictício
+6h às 24h,Share,2023-02,35.374378,DEMO fictício
+6h às 24h,Audiência,2023-03,14.975227,DEMO fictício
+6h às 24h,Share,2023-03,35.593949,DEMO fictício
+6h às 24h,Audiência,2023-04,15.046684,DEMO fictício
+6h às 24h,Share,2023-04,35.557214,DEMO fictício
+6h às 24h,Audiência,2023-05,15.090903,DEMO fictício
+6h às 24h,Share,2023-05,36.685318,DEMO fictício
+6h às 24h,Audiência,2023-06,14.888667,DEMO fictício
+6h às 24h,Share,2023-06,37.167289,DEMO fictício
+6h às 24h,Audiência,2023-07,14.049085,DEMO fictício
+6h às 24h,Share,2023-07,37.321792,DEMO fictício
+6h às 24h,Audiência,2023-08,14.71394,DEMO fictício
+6h às 24h,Share,2023-08,36.173951,DEMO fictício
+6h às 24h,Audiência,2023-09,14.666565,DEMO fictício
+6h às 24h,Share,2023-09,36.073834,DEMO fictício
+6h às 24h,Audiência,2023-10,13.347863,DEMO fictício
+6h às 24h,Share,2023-10,36.46135,DEMO fictício
+6h às 24h,Audiência,2023-11,13.468679,DEMO fictício
+6h às 24h,Share,2023-11,35.27418,DEMO fictício
+6h às 24h,Audiência,2023-12,13.618271,DEMO fictício
+6h às 24h,Share,2023-12,35.869065,DEMO fictício
+6h às 24h,Audiência,2024-01,13.267866,DEMO fictício
+6h às 24h,Share,2024-01,35.815277,DEMO fictício
+6h às 24h,Audiência,2024-02,13.334492,DEMO fictício
+6h às 24h,Share,2024-02,35.319075,DEMO fictício
+6h às 24h,Audiência,2024-03,14.558704,DEMO fictício
+6h às 24h,Share,2024-03,36.836729,DEMO fictício
+6h às 24h,Audiência,2024-04,15.307614,DEMO fictício
+6h às 24h,Share,2024-04,37.462387,DEMO fictício
+6h às 24h,Audiência,2024-05,15.579171,DEMO fictício
+6h às 24h,Share,2024-05,37.083872,DEMO fictício
+6h às 24h,Audiência,2024-06,15.790954,DEMO fictício
+6h às 24h,Share,2024-06,38.304096,DEMO fictício
+6h às 24h,Audiência,2024-07,16.2051,DEMO fictício
+6h às 24h,Share,2024-07,38.321848,DEMO fictício
+6h às 24h,Audiência,2024-08,15.261569,DEMO fictício
+6h às 24h,Share,2024-08,35.713376,DEMO fictício
+6h às 24h,Audiência,2024-09,15.022635,DEMO fictício
+6h às 24h,Share,2024-09,38.008588,DEMO fictício
+6h às 24h,Audiência,2024-10,14.742247,DEMO fictício
+6h às 24h,Share,2024-10,35.880921,DEMO fictício
+6h às 24h,Audiência,2024-11,14.783005,DEMO fictício
+6h às 24h,Share,2024-11,35.600032,DEMO fictício
+6h às 24h,Audiência,2024-12,14.438968,DEMO fictício
+6h às 24h,Share,2024-12,36.29555,DEMO fictício
+6h às 24h,Audiência,2025-01,14.421276,DEMO fictício
+6h às 24h,Share,2025-01,35.777199,DEMO fictício
+6h às 24h,Audiência,2025-02,14.213884,DEMO fictício
+6h às 24h,Share,2025-02,36.53047,DEMO fictício
+6h às 24h,Audiência,2025-03,14.818436,DEMO fictício
+6h às 24h,Share,2025-03,37.645031,DEMO fictício
+6h às 24h,Audiência,2025-04,14.581022,DEMO fictício
+6h às 24h,Share,2025-04,37.312435,DEMO fictício
+6h às 24h,Audiência,2025-05,14.548434,DEMO fictício
+6h às 24h,Share,2025-05,39.272085,DEMO fictício
+6h às 24h,Audiência,2025-06,15.701616,DEMO fictício
+6h às 24h,Share,2025-06,38.759197,DEMO fictício
+6h às 24h,Audiência,2025-07,14.889764,DEMO fictício
+6h às 24h,Share,2025-07,37.158068,DEMO fictício
+6h às 24h,Audiência,2025-08,15.369108,DEMO fictício
+6h às 24h,Share,2025-08,36.185765,DEMO fictício
+6h às 24h,Audiência,2025-09,15.639011,DEMO fictício
+6h às 24h,Share,2025-09,36.825409,DEMO fictício
+6h às 24h,Audiência,2025-10,13.927324,DEMO fictício
+6h às 24h,Share,2025-10,36.248361,DEMO fictício
+6h às 24h,Audiência,2025-11,14.612081,DEMO fictício
+6h às 24h,Share,2025-11,36.258943,DEMO fictício
+6h às 24h,Audiência,2025-12,12.659595,DEMO fictício
+6h às 24h,Share,2025-12,36.079205,DEMO fictício
+6h às 24h,Audiência,2026-01,12.68015,DEMO fictício
+6h às 24h,Share,2026-01,36.701794,DEMO fictício
+6h às 24h,Audiência,2026-02,13.425595,DEMO fictício
+6h às 24h,Share,2026-02,36.216941,DEMO fictício
+6h às 24h,Audiência,2026-03,14.048086,DEMO fictício
+6h às 24h,Share,2026-03,37.710571,DEMO fictício
+6h às 24h,Audiência,2026-04,14.23228,DEMO fictício
+6h às 24h,Share,2026-04,37.682267,DEMO fictício
+6h às 24h,Audiência,2026-05,14.788449,DEMO fictício
+6h às 24h,Share,2026-05,38.664301,DEMO fictício
+6h às 24h,Audiência,2026-06,14.302332,DEMO fictício
+6h às 24h,Share,2026-06,37.864223,DEMO fictício
+6h às 24h,Audiência,2026-07,13.854449,DEMO fictício
+6h às 24h,Share,2026-07,37.046183,DEMO fictício
+6h às 24h,Audiência,2026-08,14.974187,DEMO fictício
+6h às 24h,Share,2026-08,37.661524,DEMO fictício
+6h às 24h,Audiência,2026-09,14.197807,DEMO fictício
+6h às 24h,Share,2026-09,36.707624,DEMO fictício
+7h às 24h,Audiência,2020-01,14.67648,DEMO fictício
+7h às 24h,Share,2020-01,35.260778,DEMO fictício
+7h às 24h,Audiência,2020-02,14.657696,DEMO fictício
+7h às 24h,Share,2020-02,36.667095,DEMO fictício
+7h às 24h,Audiência,2020-03,13.995792,DEMO fictício
+7h às 24h,Share,2020-03,37.512895,DEMO fictício
+7h às 24h,Audiência,2020-04,14.531671,DEMO fictício
+7h às 24h,Share,2020-04,36.997591,DEMO fictício
+7h às 24h,Audiência,2020-05,15.400381,DEMO fictício
+7h às 24h,Share,2020-05,37.632444,DEMO fictício
+7h às 24h,Audiência,2020-06,16.45515,DEMO fictício
+7h às 24h,Share,2020-06,40.07271,DEMO fictício
+7h às 24h,Audiência,2020-07,16.175185,DEMO fictício
+7h às 24h,Share,2020-07,38.885915,DEMO fictício
+7h às 24h,Audiência,2020-08,16.072286,DEMO fictício
+7h às 24h,Share,2020-08,38.807563,DEMO fictício
+7h às 24h,Audiência,2020-09,15.659449,DEMO fictício
+7h às 24h,Share,2020-09,37.312578,DEMO fictício
+7h às 24h,Audiência,2020-10,15.280141,DEMO fictício
+7h às 24h,Share,2020-10,36.363226,DEMO fictício
+7h às 24h,Audiência,2020-11,14.723636,DEMO fictício
+7h às 24h,Share,2020-11,37.1128,DEMO fictício
+7h às 24h,Audiência,2020-12,14.183396,DEMO fictício
+7h às 24h,Share,2020-12,36.574661,DEMO fictício
+7h às 24h,Audiência,2021-01,14.666357,DEMO fictício
+7h às 24h,Share,2021-01,36.748554,DEMO fictício
+7h às 24h,Audiência,2021-02,14.912145,DEMO fictício
+7h às 24h,Share,2021-02,36.185922,DEMO fictício
+7h às 24h,Audiência,2021-03,15.406301,DEMO fictício
+7h às 24h,Share,2021-03,36.858882,DEMO fictício
+7h às 24h,Audiência,2021-04,14.893598,DEMO fictício
+7h às 24h,Share,2021-04,38.105704,DEMO fictício
+7h às 24h,Audiência,2021-05,15.335865,DEMO fictício
+7h às 24h,Share,2021-05,38.747785,DEMO fictício
+7h às 24h,Audiência,2021-06,15.054915,DEMO fictício
+7h às 24h,Share,2021-06,37.334159,DEMO fictício
+7h às 24h,Audiência,2021-07,15.76191,DEMO fictício
+7h às 24h,Share,2021-07,38.409499,DEMO fictício
+7h às 24h,Audiência,2021-08,15.342484,DEMO fictício
+7h às 24h,Share,2021-08,37.378393,DEMO fictício
+7h às 24h,Audiência,2021-09,14.183079,DEMO fictício
+7h às 24h,Share,2021-09,36.629994,DEMO fictício
+7h às 24h,Audiência,2021-10,15.668265,DEMO fictício
+7h às 24h,Share,2021-10,35.772152,DEMO fictício
+7h às 24h,Audiência,2021-11,15.574142,DEMO fictício
+7h às 24h,Share,2021-11,36.342849,DEMO fictício
+7h às 24h,Audiência,2021-12,14.652614,DEMO fictício
+7h às 24h,Share,2021-12,36.780872,DEMO fictício
+7h às 24h,Audiência,2022-01,14.54875,DEMO fictício
+7h às 24h,Share,2022-01,37.528685,DEMO fictício
+7h às 24h,Audiência,2022-02,14.004755,DEMO fictício
+7h às 24h,Share,2022-02,37.695696,DEMO fictício
+7h às 24h,Audiência,2022-03,14.545143,DEMO fictício
+7h às 24h,Share,2022-03,37.163263,DEMO fictício
+7h às 24h,Audiência,2022-04,15.393237,DEMO fictício
+7h às 24h,Share,2022-04,37.495018,DEMO fictício
+7h às 24h,Audiência,2022-05,15.124812,DEMO fictício
+7h às 24h,Share,2022-05,37.530791,DEMO fictício
+7h às 24h,Audiência,2022-06,15.514681,DEMO fictício
+7h às 24h,Share,2022-06,38.49612,DEMO fictício
+7h às 24h,Audiência,2022-07,16.437332,DEMO fictício
+7h às 24h,Share,2022-07,38.946864,DEMO fictício
+7h às 24h,Audiência,2022-08,15.421852,DEMO fictício
+7h às 24h,Share,2022-08,39.620546,DEMO fictício
+7h às 24h,Audiência,2022-09,14.677859,DEMO fictício
+7h às 24h,Share,2022-09,38.665054,DEMO fictício
+7h às 24h,Audiência,2022-10,14.543788,DEMO fictício
+7h às 24h,Share,2022-10,36.309405,DEMO fictício
+7h às 24h,Audiência,2022-11,13.462141,DEMO fictício
+7h às 24h,Share,2022-11,36.699685,DEMO fictício
+7h às 24h,Audiência,2022-12,14.407468,DEMO fictício
+7h às 24h,Share,2022-12,38.165463,DEMO fictício
+7h às 24h,Audiência,2023-01,14.216036,DEMO fictício
+7h às 24h,Share,2023-01,37.826117,DEMO fictício
+7h às 24h,Audiência,2023-02,14.286491,DEMO fictício
+7h às 24h,Share,2023-02,36.196488,DEMO fictício
+7h às 24h,Audiência,2023-03,14.521354,DEMO fictício
+7h às 24h,Share,2023-03,37.504684,DEMO fictício
+7h às 24h,Audiência,2023-04,14.38866,DEMO fictício
+7h às 24h,Share,2023-04,38.295607,DEMO fictício
+7h às 24h,Audiência,2023-05,15.065893,DEMO fictício
+7h às 24h,Share,2023-05,37.90192,DEMO fictício
+7h às 24h,Audiência,2023-06,15.03976,DEMO fictício
+7h às 24h,Share,2023-06,38.417217,DEMO fictício
+7h às 24h,Audiência,2023-07,15.182087,DEMO fictício
+7h às 24h,Share,2023-07,39.500634,DEMO fictício
+7h às 24h,Audiência,2023-08,14.534952,DEMO fictício
+7h às 24h,Share,2023-08,39.225417,DEMO fictício
+7h às 24h,Audiência,2023-09,15.337815,DEMO fictício
+7h às 24h,Share,2023-09,37.419049,DEMO fictício
+7h às 24h,Audiência,2023-10,15.011346,DEMO fictício
+7h às 24h,Share,2023-10,37.54748,DEMO fictício
+7h às 24h,Audiência,2023-11,13.783877,DEMO fictício
+7h às 24h,Share,2023-11,36.963739,DEMO fictício
+7h às 24h,Audiência,2023-12,14.802784,DEMO fictício
+7h às 24h,Share,2023-12,36.613798,DEMO fictício
+7h às 24h,Audiência,2024-01,14.490367,DEMO fictício
+7h às 24h,Share,2024-01,36.281204,DEMO fictício
+7h às 24h,Audiência,2024-02,13.932597,DEMO fictício
+7h às 24h,Share,2024-02,36.361345,DEMO fictício
+7h às 24h,Audiência,2024-03,13.965151,DEMO fictício
+7h às 24h,Share,2024-03,36.13621,DEMO fictício
+7h às 24h,Audiência,2024-04,15.119258,DEMO fictício
+7h às 24h,Share,2024-04,35.887132,DEMO fictício
+7h às 24h,Audiência,2024-05,15.931555,DEMO fictício
+7h às 24h,Share,2024-05,37.954674,DEMO fictício
+7h às 24h,Audiência,2024-06,16.253254,DEMO fictício
+7h às 24h,Share,2024-06,39.051049,DEMO fictício
+7h às 24h,Audiência,2024-07,16.731337,DEMO fictício
+7h às 24h,Share,2024-07,40.538084,DEMO fictício
+7h às 24h,Audiência,2024-08,15.176334,DEMO fictício
+7h às 24h,Share,2024-08,39.326116,DEMO fictício
+7h às 24h,Audiência,2024-09,14.818172,DEMO fictício
+7h às 24h,Share,2024-09,38.072656,DEMO fictício
+7h às 24h,Audiência,2024-10,14.010919,DEMO fictício
+7h às 24h,Share,2024-10,37.520191,DEMO fictício
+7h às 24h,Audiência,2024-11,13.781986,DEMO fictício
+7h às 24h,Share,2024-11,37.455035,DEMO fictício
+7h às 24h,Audiência,2024-12,13.909416,DEMO fictício
+7h às 24h,Share,2024-12,37.491468,DEMO fictício
+7h às 24h,Audiência,2025-01,14.200585,DEMO fictício
+7h às 24h,Share,2025-01,37.286134,DEMO fictício
+7h às 24h,Audiência,2025-02,13.733855,DEMO fictício
+7h às 24h,Share,2025-02,37.895749,DEMO fictício
+7h às 24h,Audiência,2025-03,13.326706,DEMO fictício
+7h às 24h,Share,2025-03,38.335321,DEMO fictício
+7h às 24h,Audiência,2025-04,14.065556,DEMO fictício
+7h às 24h,Share,2025-04,38.98384,DEMO fictício
+7h às 24h,Audiência,2025-05,15.7809,DEMO fictício
+7h às 24h,Share,2025-05,38.413763,DEMO fictício
+7h às 24h,Audiência,2025-06,16.029128,DEMO fictício
+7h às 24h,Share,2025-06,38.916413,DEMO fictício
+7h às 24h,Audiência,2025-07,15.036035,DEMO fictício
+7h às 24h,Share,2025-07,38.523219,DEMO fictício
+7h às 24h,Audiência,2025-08,14.647829,DEMO fictício
+7h às 24h,Share,2025-08,37.809048,DEMO fictício
+7h às 24h,Audiência,2025-09,14.121566,DEMO fictício
+7h às 24h,Share,2025-09,36.695895,DEMO fictício
+7h às 24h,Audiência,2025-10,14.074,DEMO fictício
+7h às 24h,Share,2025-10,38.537457,DEMO fictício
+7h às 24h,Audiência,2025-11,14.228043,DEMO fictício
+7h às 24h,Share,2025-11,36.464475,DEMO fictício
+7h às 24h,Audiência,2025-12,14.198876,DEMO fictício
+7h às 24h,Share,2025-12,35.325927,DEMO fictício
+7h às 24h,Audiência,2026-01,14.61409,DEMO fictício
+7h às 24h,Share,2026-01,36.837322,DEMO fictício
+7h às 24h,Audiência,2026-02,14.917481,DEMO fictício
+7h às 24h,Share,2026-02,36.019688,DEMO fictício
+7h às 24h,Audiência,2026-03,14.697726,DEMO fictício
+7h às 24h,Share,2026-03,37.091389,DEMO fictício
+7h às 24h,Audiência,2026-04,15.321792,DEMO fictício
+7h às 24h,Share,2026-04,37.903624,DEMO fictício
+7h às 24h,Audiência,2026-05,15.486471,DEMO fictício
+7h às 24h,Share,2026-05,39.799495,DEMO fictício
+7h às 24h,Audiência,2026-06,15.893707,DEMO fictício
+7h às 24h,Share,2026-06,38.530362,DEMO fictício
+7h às 24h,Audiência,2026-07,16.389322,DEMO fictício
+7h às 24h,Share,2026-07,38.875109,DEMO fictício
+7h às 24h,Audiência,2026-08,15.924447,DEMO fictício
+7h às 24h,Share,2026-08,38.210556,DEMO fictício
+7h às 24h,Audiência,2026-09,15.109499,DEMO fictício
+7h às 24h,Share,2026-09,39.329664,DEMO fictício
+Jornal da Manhã,Audiência,2020-01,10.943034,DEMO fictício
+Jornal da Manhã,Share,2020-01,48.799059,DEMO fictício
+Jornal da Manhã,Audiência,2020-02,11.409425,DEMO fictício
+Jornal da Manhã,Share,2020-02,46.521628,DEMO fictício
+Jornal da Manhã,Audiência,2020-03,11.758823,DEMO fictício
+Jornal da Manhã,Share,2020-03,46.914107,DEMO fictício
+Jornal da Manhã,Audiência,2020-04,12.175544,DEMO fictício
+Jornal da Manhã,Share,2020-04,46.941967,DEMO fictício
+Jornal da Manhã,Audiência,2020-05,11.655379,DEMO fictício
+Jornal da Manhã,Share,2020-05,49.090162,DEMO fictício
+Jornal da Manhã,Audiência,2020-06,11.948832,DEMO fictício
+Jornal da Manhã,Share,2020-06,49.258841,DEMO fictício
+Jornal da Manhã,Audiência,2020-07,12.74584,DEMO fictício
+Jornal da Manhã,Share,2020-07,48.359289,DEMO fictício
+Jornal da Manhã,Audiência,2020-08,11.635609,DEMO fictício
+Jornal da Manhã,Share,2020-08,49.807113,DEMO fictício
+Jornal da Manhã,Audiência,2020-09,11.802054,DEMO fictício
+Jornal da Manhã,Share,2020-09,48.983666,DEMO fictício
+Jornal da Manhã,Audiência,2020-10,11.705985,DEMO fictício
+Jornal da Manhã,Share,2020-10,48.332704,DEMO fictício
+Jornal da Manhã,Audiência,2020-11,11.319403,DEMO fictício
+Jornal da Manhã,Share,2020-11,48.227654,DEMO fictício
+Jornal da Manhã,Audiência,2020-12,11.39405,DEMO fictício
+Jornal da Manhã,Share,2020-12,47.498905,DEMO fictício
+Jornal da Manhã,Audiência,2021-01,11.194778,DEMO fictício
+Jornal da Manhã,Share,2021-01,46.858022,DEMO fictício
+Jornal da Manhã,Audiência,2021-02,11.066043,DEMO fictício
+Jornal da Manhã,Share,2021-02,48.934457,DEMO fictício
+Jornal da Manhã,Audiência,2021-03,11.400704,DEMO fictício
+Jornal da Manhã,Share,2021-03,49.519868,DEMO fictício
+Jornal da Manhã,Audiência,2021-04,12.551418,DEMO fictício
+Jornal da Manhã,Share,2021-04,49.933526,DEMO fictício
+Jornal da Manhã,Audiência,2021-05,13.878714,DEMO fictício
+Jornal da Manhã,Share,2021-05,50.400752,DEMO fictício
+Jornal da Manhã,Audiência,2021-06,13.160737,DEMO fictício
+Jornal da Manhã,Share,2021-06,50.457758,DEMO fictício
+Jornal da Manhã,Audiência,2021-07,12.134456,DEMO fictício
+Jornal da Manhã,Share,2021-07,50.933926,DEMO fictício
+Jornal da Manhã,Audiência,2021-08,11.394563,DEMO fictício
+Jornal da Manhã,Share,2021-08,52.650628,DEMO fictício
+Jornal da Manhã,Audiência,2021-09,11.852588,DEMO fictício
+Jornal da Manhã,Share,2021-09,50.536902,DEMO fictício
+Jornal da Manhã,Audiência,2021-10,11.579979,DEMO fictício
+Jornal da Manhã,Share,2021-10,47.215582,DEMO fictício
+Jornal da Manhã,Audiência,2021-11,11.42856,DEMO fictício
+Jornal da Manhã,Share,2021-11,47.989135,DEMO fictício
+Jornal da Manhã,Audiência,2021-12,11.320711,DEMO fictício
+Jornal da Manhã,Share,2021-12,49.81284,DEMO fictício
+Jornal da Manhã,Audiência,2022-01,11.680283,DEMO fictício
+Jornal da Manhã,Share,2022-01,49.283878,DEMO fictício
+Jornal da Manhã,Audiência,2022-02,12.256331,DEMO fictício
+Jornal da Manhã,Share,2022-02,50.033264,DEMO fictício
+Jornal da Manhã,Audiência,2022-03,11.58033,DEMO fictício
+Jornal da Manhã,Share,2022-03,49.859231,DEMO fictício
+Jornal da Manhã,Audiência,2022-04,11.602543,DEMO fictício
+Jornal da Manhã,Share,2022-04,48.81714,DEMO fictício
+Jornal da Manhã,Audiência,2022-05,12.21547,DEMO fictício
+Jornal da Manhã,Share,2022-05,51.070972,DEMO fictício
+Jornal da Manhã,Audiência,2022-06,12.807513,DEMO fictício
+Jornal da Manhã,Share,2022-06,50.021248,DEMO fictício
+Jornal da Manhã,Audiência,2022-07,12.647142,DEMO fictício
+Jornal da Manhã,Share,2022-07,51.128962,DEMO fictício
+Jornal da Manhã,Audiência,2022-08,12.512213,DEMO fictício
+Jornal da Manhã,Share,2022-08,49.850364,DEMO fictício
+Jornal da Manhã,Audiência,2022-09,12.111763,DEMO fictício
+Jornal da Manhã,Share,2022-09,48.754508,DEMO fictício
+Jornal da Manhã,Audiência,2022-10,11.472165,DEMO fictício
+Jornal da Manhã,Share,2022-10,46.510969,DEMO fictício
+Jornal da Manhã,Audiência,2022-11,11.144806,DEMO fictício
+Jornal da Manhã,Share,2022-11,46.939687,DEMO fictício
+Jornal da Manhã,Audiência,2022-12,11.204766,DEMO fictício
+Jornal da Manhã,Share,2022-12,49.634232,DEMO fictício
+Jornal da Manhã,Audiência,2023-01,11.337219,DEMO fictício
+Jornal da Manhã,Share,2023-01,49.457841,DEMO fictício
+Jornal da Manhã,Audiência,2023-02,10.963601,DEMO fictício
+Jornal da Manhã,Share,2023-02,49.916489,DEMO fictício
+Jornal da Manhã,Audiência,2023-03,12.090315,DEMO fictício
+Jornal da Manhã,Share,2023-03,51.098664,DEMO fictício
+Jornal da Manhã,Audiência,2023-04,12.676966,DEMO fictício
+Jornal da Manhã,Share,2023-04,51.4667,DEMO fictício
+Jornal da Manhã,Audiência,2023-05,12.769611,DEMO fictício
+Jornal da Manhã,Share,2023-05,53.030112,DEMO fictício
+Jornal da Manhã,Audiência,2023-06,13.139803,DEMO fictício
+Jornal da Manhã,Share,2023-06,52.520634,DEMO fictício
+Jornal da Manhã,Audiência,2023-07,13.106697,DEMO fictício
+Jornal da Manhã,Share,2023-07,51.644518,DEMO fictício
+Jornal da Manhã,Audiência,2023-08,13.506578,DEMO fictício
+Jornal da Manhã,Share,2023-08,50.645685,DEMO fictício
+Jornal da Manhã,Audiência,2023-09,12.781095,DEMO fictício
+Jornal da Manhã,Share,2023-09,49.534555,DEMO fictício
+Jornal da Manhã,Audiência,2023-10,11.825491,DEMO fictício
+Jornal da Manhã,Share,2023-10,49.001509,DEMO fictício
+Jornal da Manhã,Audiência,2023-11,11.959214,DEMO fictício
+Jornal da Manhã,Share,2023-11,48.577576,DEMO fictício
+Jornal da Manhã,Audiência,2023-12,10.861999,DEMO fictício
+Jornal da Manhã,Share,2023-12,48.427577,DEMO fictício
+Jornal da Manhã,Audiência,2024-01,10.544055,DEMO fictício
+Jornal da Manhã,Share,2024-01,48.852073,DEMO fictício
+Jornal da Manhã,Audiência,2024-02,11.344438,DEMO fictício
+Jornal da Manhã,Share,2024-02,50.309249,DEMO fictício
+Jornal da Manhã,Audiência,2024-03,11.278156,DEMO fictício
+Jornal da Manhã,Share,2024-03,50.256587,DEMO fictício
+Jornal da Manhã,Audiência,2024-04,11.867872,DEMO fictício
+Jornal da Manhã,Share,2024-04,50.660503,DEMO fictício
+Jornal da Manhã,Audiência,2024-05,12.228991,DEMO fictício
+Jornal da Manhã,Share,2024-05,50.329794,DEMO fictício
+Jornal da Manhã,Audiência,2024-06,12.673509,DEMO fictício
+Jornal da Manhã,Share,2024-06,51.117678,DEMO fictício
+Jornal da Manhã,Audiência,2024-07,12.667499,DEMO fictício
+Jornal da Manhã,Share,2024-07,49.881935,DEMO fictício
+Jornal da Manhã,Audiência,2024-08,12.406005,DEMO fictício
+Jornal da Manhã,Share,2024-08,50.170736,DEMO fictício
+Jornal da Manhã,Audiência,2024-09,11.753173,DEMO fictício
+Jornal da Manhã,Share,2024-09,51.7133,DEMO fictício
+Jornal da Manhã,Audiência,2024-10,11.070323,DEMO fictício
+Jornal da Manhã,Share,2024-10,52.910462,DEMO fictício
+Jornal da Manhã,Audiência,2024-11,11.111486,DEMO fictício
+Jornal da Manhã,Share,2024-11,50.891881,DEMO fictício
+Jornal da Manhã,Audiência,2024-12,11.394414,DEMO fictício
+Jornal da Manhã,Share,2024-12,50.33865,DEMO fictício
+Jornal da Manhã,Audiência,2025-01,11.171482,DEMO fictício
+Jornal da Manhã,Share,2025-01,50.531651,DEMO fictício
+Jornal da Manhã,Audiência,2025-02,11.904292,DEMO fictício
+Jornal da Manhã,Share,2025-02,49.69173,DEMO fictício
+Jornal da Manhã,Audiência,2025-03,11.846937,DEMO fictício
+Jornal da Manhã,Share,2025-03,50.189715,DEMO fictício
+Jornal da Manhã,Audiência,2025-04,12.045213,DEMO fictício
+Jornal da Manhã,Share,2025-04,48.923828,DEMO fictício
+Jornal da Manhã,Audiência,2025-05,12.748784,DEMO fictício
+Jornal da Manhã,Share,2025-05,50.929311,DEMO fictício
+Jornal da Manhã,Audiência,2025-06,12.946162,DEMO fictício
+Jornal da Manhã,Share,2025-06,50.650955,DEMO fictício
+Jornal da Manhã,Audiência,2025-07,12.386184,DEMO fictício
+Jornal da Manhã,Share,2025-07,52.468615,DEMO fictício
+Jornal da Manhã,Audiência,2025-08,11.632954,DEMO fictício
+Jornal da Manhã,Share,2025-08,49.993576,DEMO fictício
+Jornal da Manhã,Audiência,2025-09,11.936007,DEMO fictício
+Jornal da Manhã,Share,2025-09,48.13908,DEMO fictício
+Jornal da Manhã,Audiência,2025-10,11.25308,DEMO fictício
+Jornal da Manhã,Share,2025-10,49.805538,DEMO fictício
+Jornal da Manhã,Audiência,2025-11,11.320759,DEMO fictício
+Jornal da Manhã,Share,2025-11,48.627849,DEMO fictício
+Jornal da Manhã,Audiência,2025-12,10.809637,DEMO fictício
+Jornal da Manhã,Share,2025-12,48.892322,DEMO fictício
+Jornal da Manhã,Audiência,2026-01,11.292581,DEMO fictício
+Jornal da Manhã,Share,2026-01,49.614848,DEMO fictício
+Jornal da Manhã,Audiência,2026-02,11.513701,DEMO fictício
+Jornal da Manhã,Share,2026-02,49.241117,DEMO fictício
+Jornal da Manhã,Audiência,2026-03,11.415901,DEMO fictício
+Jornal da Manhã,Share,2026-03,50.85641,DEMO fictício
+Jornal da Manhã,Audiência,2026-04,12.265268,DEMO fictício
+Jornal da Manhã,Share,2026-04,51.526338,DEMO fictício
+Jornal da Manhã,Audiência,2026-05,12.236158,DEMO fictício
+Jornal da Manhã,Share,2026-05,52.979474,DEMO fictício
+Jornal da Manhã,Audiência,2026-06,13.124409,DEMO fictício
+Jornal da Manhã,Share,2026-06,54.078432,DEMO fictício
+Jornal da Manhã,Audiência,2026-07,13.270328,DEMO fictício
+Jornal da Manhã,Share,2026-07,50.221727,DEMO fictício
+Jornal da Manhã,Audiência,2026-08,13.259844,DEMO fictício
+Jornal da Manhã,Share,2026-08,50.377616,DEMO fictício
+Jornal da Manhã,Audiência,2026-09,13.122913,DEMO fictício
+Jornal da Manhã,Share,2026-09,50.34889,DEMO fictício
+Bahia Meio Dia,Audiência,2020-01,9.93223,DEMO fictício
+Bahia Meio Dia,Share,2020-01,25.681742,DEMO fictício
+Bahia Meio Dia,Audiência,2020-02,10.18172,DEMO fictício
+Bahia Meio Dia,Share,2020-02,25.359269,DEMO fictício
+Bahia Meio Dia,Audiência,2020-03,10.339804,DEMO fictício
+Bahia Meio Dia,Share,2020-03,26.063328,DEMO fictício
+Bahia Meio Dia,Audiência,2020-04,10.69965,DEMO fictício
+Bahia Meio Dia,Share,2020-04,25.938383,DEMO fictício
+Bahia Meio Dia,Audiência,2020-05,11.645331,DEMO fictício
+Bahia Meio Dia,Share,2020-05,25.955326,DEMO fictício
+Bahia Meio Dia,Audiência,2020-06,11.016383,DEMO fictício
+Bahia Meio Dia,Share,2020-06,26.688548,DEMO fictício
+Bahia Meio Dia,Audiência,2020-07,10.781713,DEMO fictício
+Bahia Meio Dia,Share,2020-07,26.657506,DEMO fictício
+Bahia Meio Dia,Audiência,2020-08,10.568304,DEMO fictício
+Bahia Meio Dia,Share,2020-08,26.815037,DEMO fictício
+Bahia Meio Dia,Audiência,2020-09,10.324888,DEMO fictício
+Bahia Meio Dia,Share,2020-09,26.306389,DEMO fictício
+Bahia Meio Dia,Audiência,2020-10,10.098995,DEMO fictício
+Bahia Meio Dia,Share,2020-10,25.420675,DEMO fictício
+Bahia Meio Dia,Audiência,2020-11,9.729211,DEMO fictício
+Bahia Meio Dia,Share,2020-11,25.340367,DEMO fictício
+Bahia Meio Dia,Audiência,2020-12,10.148713,DEMO fictício
+Bahia Meio Dia,Share,2020-12,24.239051,DEMO fictício
+Bahia Meio Dia,Audiência,2021-01,9.724281,DEMO fictício
+Bahia Meio Dia,Share,2021-01,24.743395,DEMO fictício
+Bahia Meio Dia,Audiência,2021-02,10.449489,DEMO fictício
+Bahia Meio Dia,Share,2021-02,24.811138,DEMO fictício
+Bahia Meio Dia,Audiência,2021-03,10.069087,DEMO fictício
+Bahia Meio Dia,Share,2021-03,25.608368,DEMO fictício
+Bahia Meio Dia,Audiência,2021-04,9.903514,DEMO fictício
+Bahia Meio Dia,Share,2021-04,25.683988,DEMO fictício
+Bahia Meio Dia,Audiência,2021-05,10.066299,DEMO fictício
+Bahia Meio Dia,Share,2021-05,25.04918,DEMO fictício
+Bahia Meio Dia,Audiência,2021-06,10.99014,DEMO fictício
+Bahia Meio Dia,Share,2021-06,26.370801,DEMO fictício
+Bahia Meio Dia,Audiência,2021-07,11.116491,DEMO fictício
+Bahia Meio Dia,Share,2021-07,27.093751,DEMO fictício
+Bahia Meio Dia,Audiência,2021-08,11.695292,DEMO fictício
+Bahia Meio Dia,Share,2021-08,27.199569,DEMO fictício
+Bahia Meio Dia,Audiência,2021-09,11.523295,DEMO fictício
+Bahia Meio Dia,Share,2021-09,26.090195,DEMO fictício
+Bahia Meio Dia,Audiência,2021-10,11.299751,DEMO fictício
+Bahia Meio Dia,Share,2021-10,25.66896,DEMO fictício
+Bahia Meio Dia,Audiência,2021-11,10.373809,DEMO fictício
+Bahia Meio Dia,Share,2021-11,25.0529,DEMO fictício
+Bahia Meio Dia,Audiência,2021-12,9.691806,DEMO fictício
+Bahia Meio Dia,Share,2021-12,24.976459,DEMO fictício
+Bahia Meio Dia,Audiência,2022-01,9.411276,DEMO fictício
+Bahia Meio Dia,Share,2022-01,23.624035,DEMO fictício
+Bahia Meio Dia,Audiência,2022-02,10.082605,DEMO fictício
+Bahia Meio Dia,Share,2022-02,23.637479,DEMO fictício
+Bahia Meio Dia,Audiência,2022-03,10.272902,DEMO fictício
+Bahia Meio Dia,Share,2022-03,24.315164,DEMO fictício
+Bahia Meio Dia,Audiência,2022-04,10.351602,DEMO fictício
+Bahia Meio Dia,Share,2022-04,24.721622,DEMO fictício
+Bahia Meio Dia,Audiência,2022-05,10.624089,DEMO fictício
+Bahia Meio Dia,Share,2022-05,25.4148,DEMO fictício
+Bahia Meio Dia,Audiência,2022-06,10.433848,DEMO fictício
+Bahia Meio Dia,Share,2022-06,26.212755,DEMO fictício
+Bahia Meio Dia,Audiência,2022-07,11.425697,DEMO fictício
+Bahia Meio Dia,Share,2022-07,25.5512,DEMO fictício
+Bahia Meio Dia,Audiência,2022-08,10.989477,DEMO fictício
+Bahia Meio Dia,Share,2022-08,26.234135,DEMO fictício
+Bahia Meio Dia,Audiência,2022-09,10.806992,DEMO fictício
+Bahia Meio Dia,Share,2022-09,25.921848,DEMO fictício
+Bahia Meio Dia,Audiência,2022-10,9.357908,DEMO fictício
+Bahia Meio Dia,Share,2022-10,25.352481,DEMO fictício
+Bahia Meio Dia,Audiência,2022-11,9.039597,DEMO fictício
+Bahia Meio Dia,Share,2022-11,25.276096,DEMO fictício
+Bahia Meio Dia,Audiência,2022-12,9.171809,DEMO fictício
+Bahia Meio Dia,Share,2022-12,23.986902,DEMO fictício
+Bahia Meio Dia,Audiência,2023-01,9.819673,DEMO fictício
+Bahia Meio Dia,Share,2023-01,24.6525,DEMO fictício
+Bahia Meio Dia,Audiência,2023-02,9.540023,DEMO fictício
+Bahia Meio Dia,Share,2023-02,24.709146,DEMO fictício
+Bahia Meio Dia,Audiência,2023-03,9.59501,DEMO fictício
+Bahia Meio Dia,Share,2023-03,24.629385,DEMO fictício
+Bahia Meio Dia,Audiência,2023-04,9.770622,DEMO fictício
+Bahia Meio Dia,Share,2023-04,26.112918,DEMO fictício
+Bahia Meio Dia,Audiência,2023-05,10.351342,DEMO fictício
+Bahia Meio Dia,Share,2023-05,25.978138,DEMO fictício
+Bahia Meio Dia,Audiência,2023-06,10.679944,DEMO fictício
+Bahia Meio Dia,Share,2023-06,26.291828,DEMO fictício
+Bahia Meio Dia,Audiência,2023-07,10.996939,DEMO fictício
+Bahia Meio Dia,Share,2023-07,27.126835,DEMO fictício
+Bahia Meio Dia,Audiência,2023-08,11.171141,DEMO fictício
+Bahia Meio Dia,Share,2023-08,27.659776,DEMO fictício
+Bahia Meio Dia,Audiência,2023-09,10.850221,DEMO fictício
+Bahia Meio Dia,Share,2023-09,26.690805,DEMO fictício
+Bahia Meio Dia,Audiência,2023-10,10.415519,DEMO fictício
+Bahia Meio Dia,Share,2023-10,26.234934,DEMO fictício
+Bahia Meio Dia,Audiência,2023-11,10.118904,DEMO fictício
+Bahia Meio Dia,Share,2023-11,24.39476,DEMO fictício
+Bahia Meio Dia,Audiência,2023-12,10.139755,DEMO fictício
+Bahia Meio Dia,Share,2023-12,24.018773,DEMO fictício
+Bahia Meio Dia,Audiência,2024-01,9.995637,DEMO fictício
+Bahia Meio Dia,Share,2024-01,23.82823,DEMO fictício
+Bahia Meio Dia,Audiência,2024-02,10.173088,DEMO fictício
+Bahia Meio Dia,Share,2024-02,24.985757,DEMO fictício
+Bahia Meio Dia,Audiência,2024-03,9.787794,DEMO fictício
+Bahia Meio Dia,Share,2024-03,24.647103,DEMO fictício
+Bahia Meio Dia,Audiência,2024-04,10.359044,DEMO fictício
+Bahia Meio Dia,Share,2024-04,25.245781,DEMO fictício
+Bahia Meio Dia,Audiência,2024-05,10.105995,DEMO fictício
+Bahia Meio Dia,Share,2024-05,25.780554,DEMO fictício
+Bahia Meio Dia,Audiência,2024-06,10.450339,DEMO fictício
+Bahia Meio Dia,Share,2024-06,25.590942,DEMO fictício
+Bahia Meio Dia,Audiência,2024-07,10.822501,DEMO fictício
+Bahia Meio Dia,Share,2024-07,26.48915,DEMO fictício
+Bahia Meio Dia,Audiência,2024-08,10.814253,DEMO fictício
+Bahia Meio Dia,Share,2024-08,26.2648,DEMO fictício
+Bahia Meio Dia,Audiência,2024-09,10.437433,DEMO fictício
+Bahia Meio Dia,Share,2024-09,25.567626,DEMO fictício
+Bahia Meio Dia,Audiência,2024-10,10.271557,DEMO fictício
+Bahia Meio Dia,Share,2024-10,26.22333,DEMO fictício
+Bahia Meio Dia,Audiência,2024-11,9.966567,DEMO fictício
+Bahia Meio Dia,Share,2024-11,25.540202,DEMO fictício
+Bahia Meio Dia,Audiência,2024-12,8.951331,DEMO fictício
+Bahia Meio Dia,Share,2024-12,24.999033,DEMO fictício
+Bahia Meio Dia,Audiência,2025-01,9.405074,DEMO fictício
+Bahia Meio Dia,Share,2025-01,24.616914,DEMO fictício
+Bahia Meio Dia,Audiência,2025-02,9.57452,DEMO fictício
+Bahia Meio Dia,Share,2025-02,24.790539,DEMO fictício
+Bahia Meio Dia,Audiência,2025-03,9.803637,DEMO fictício
+Bahia Meio Dia,Share,2025-03,24.713491,DEMO fictício
+Bahia Meio Dia,Audiência,2025-04,10.099559,DEMO fictício
+Bahia Meio Dia,Share,2025-04,25.26985,DEMO fictício
+Bahia Meio Dia,Audiência,2025-05,10.452207,DEMO fictício
+Bahia Meio Dia,Share,2025-05,26.534667,DEMO fictício
+Bahia Meio Dia,Audiência,2025-06,10.538392,DEMO fictício
+Bahia Meio Dia,Share,2025-06,26.427579,DEMO fictício
+Bahia Meio Dia,Audiência,2025-07,11.123227,DEMO fictício
+Bahia Meio Dia,Share,2025-07,26.190233,DEMO fictício
+Bahia Meio Dia,Audiência,2025-08,11.244832,DEMO fictício
+Bahia Meio Dia,Share,2025-08,26.127559,DEMO fictício
+Bahia Meio Dia,Audiência,2025-09,11.397561,DEMO fictício
+Bahia Meio Dia,Share,2025-09,25.388362,DEMO fictício
+Bahia Meio Dia,Audiência,2025-10,11.69807,DEMO fictício
+Bahia Meio Dia,Share,2025-10,24.695688,DEMO fictício
+Bahia Meio Dia,Audiência,2025-11,11.009045,DEMO fictício
+Bahia Meio Dia,Share,2025-11,24.268897,DEMO fictício
+Bahia Meio Dia,Audiência,2025-12,10.399174,DEMO fictício
+Bahia Meio Dia,Share,2025-12,23.897542,DEMO fictício
+Bahia Meio Dia,Audiência,2026-01,10.618091,DEMO fictício
+Bahia Meio Dia,Share,2026-01,24.223179,DEMO fictício
+Bahia Meio Dia,Audiência,2026-02,10.498427,DEMO fictício
+Bahia Meio Dia,Share,2026-02,24.962725,DEMO fictício
+Bahia Meio Dia,Audiência,2026-03,10.600025,DEMO fictício
+Bahia Meio Dia,Share,2026-03,25.261131,DEMO fictício
+Bahia Meio Dia,Audiência,2026-04,10.63948,DEMO fictício
+Bahia Meio Dia,Share,2026-04,24.872343,DEMO fictício
+Bahia Meio Dia,Audiência,2026-05,10.685317,DEMO fictício
+Bahia Meio Dia,Share,2026-05,26.02355,DEMO fictício
+Bahia Meio Dia,Audiência,2026-06,10.539692,DEMO fictício
+Bahia Meio Dia,Share,2026-06,25.416223,DEMO fictício
+Bahia Meio Dia,Audiência,2026-07,10.774452,DEMO fictício
+Bahia Meio Dia,Share,2026-07,26.270662,DEMO fictício
+Bahia Meio Dia,Audiência,2026-08,10.09639,DEMO fictício
+Bahia Meio Dia,Share,2026-08,26.423988,DEMO fictício
+Bahia Meio Dia,Audiência,2026-09,10.05643,DEMO fictício
+Bahia Meio Dia,Share,2026-09,24.654517,DEMO fictício
+Globo Esporte,Audiência,2020-01,11.405975,DEMO fictício
+Globo Esporte,Share,2020-01,26.561927,DEMO fictício
+Globo Esporte,Audiência,2020-02,11.615538,DEMO fictício
+Globo Esporte,Share,2020-02,27.230042,DEMO fictício
+Globo Esporte,Audiência,2020-03,11.595533,DEMO fictício
+Globo Esporte,Share,2020-03,28.677692,DEMO fictício
+Globo Esporte,Audiência,2020-04,12.279062,DEMO fictício
+Globo Esporte,Share,2020-04,28.554727,DEMO fictício
+Globo Esporte,Audiência,2020-05,12.847901,DEMO fictício
+Globo Esporte,Share,2020-05,29.258052,DEMO fictício
+Globo Esporte,Audiência,2020-06,12.722005,DEMO fictício
+Globo Esporte,Share,2020-06,28.880615,DEMO fictício
+Globo Esporte,Audiência,2020-07,12.503465,DEMO fictício
+Globo Esporte,Share,2020-07,28.662108,DEMO fictício
+Globo Esporte,Audiência,2020-08,11.762953,DEMO fictício
+Globo Esporte,Share,2020-08,28.940823,DEMO fictício
+Globo Esporte,Audiência,2020-09,11.617723,DEMO fictício
+Globo Esporte,Share,2020-09,28.305329,DEMO fictício
+Globo Esporte,Audiência,2020-10,11.578484,DEMO fictício
+Globo Esporte,Share,2020-10,27.582531,DEMO fictício
+Globo Esporte,Audiência,2020-11,10.99473,DEMO fictício
+Globo Esporte,Share,2020-11,26.860711,DEMO fictício
+Globo Esporte,Audiência,2020-12,11.376696,DEMO fictício
+Globo Esporte,Share,2020-12,26.430232,DEMO fictício
+Globo Esporte,Audiência,2021-01,11.793175,DEMO fictício
+Globo Esporte,Share,2021-01,27.347067,DEMO fictício
+Globo Esporte,Audiência,2021-02,11.341331,DEMO fictício
+Globo Esporte,Share,2021-02,27.665902,DEMO fictício
+Globo Esporte,Audiência,2021-03,11.870779,DEMO fictício
+Globo Esporte,Share,2021-03,28.523545,DEMO fictício
+Globo Esporte,Audiência,2021-04,12.994024,DEMO fictício
+Globo Esporte,Share,2021-04,28.792773,DEMO fictício
+Globo Esporte,Audiência,2021-05,12.590795,DEMO fictício
+Globo Esporte,Share,2021-05,29.956793,DEMO fictício
+Globo Esporte,Audiência,2021-06,13.027965,DEMO fictício
+Globo Esporte,Share,2021-06,29.127492,DEMO fictício
+Globo Esporte,Audiência,2021-07,12.41584,DEMO fictício
+Globo Esporte,Share,2021-07,29.133281,DEMO fictício
+Globo Esporte,Audiência,2021-08,12.113534,DEMO fictício
+Globo Esporte,Share,2021-08,28.292572,DEMO fictício
+Globo Esporte,Audiência,2021-09,11.679392,DEMO fictício
+Globo Esporte,Share,2021-09,27.769266,DEMO fictício
+Globo Esporte,Audiência,2021-10,10.917223,DEMO fictício
+Globo Esporte,Share,2021-10,27.25304,DEMO fictício
+Globo Esporte,Audiência,2021-11,11.100493,DEMO fictício
+Globo Esporte,Share,2021-11,27.228704,DEMO fictício
+Globo Esporte,Audiência,2021-12,10.965564,DEMO fictício
+Globo Esporte,Share,2021-12,26.440105,DEMO fictício
+Globo Esporte,Audiência,2022-01,10.932849,DEMO fictício
+Globo Esporte,Share,2022-01,26.196064,DEMO fictício
+Globo Esporte,Audiência,2022-02,11.079276,DEMO fictício
+Globo Esporte,Share,2022-02,26.29363,DEMO fictício
+Globo Esporte,Audiência,2022-03,12.746364,DEMO fictício
+Globo Esporte,Share,2022-03,26.895204,DEMO fictício
+Globo Esporte,Audiência,2022-04,12.351691,DEMO fictício
+Globo Esporte,Share,2022-04,27.309985,DEMO fictício
+Globo Esporte,Audiência,2022-05,12.453573,DEMO fictício
+Globo Esporte,Share,2022-05,28.161198,DEMO fictício
+Globo Esporte,Audiência,2022-06,12.186187,DEMO fictício
+Globo Esporte,Share,2022-06,28.87029,DEMO fictício
+Globo Esporte,Audiência,2022-07,12.323052,DEMO fictício
+Globo Esporte,Share,2022-07,28.231175,DEMO fictício
+Globo Esporte,Audiência,2022-08,11.940238,DEMO fictício
+Globo Esporte,Share,2022-08,27.387494,DEMO fictício
+Globo Esporte,Audiência,2022-09,11.374316,DEMO fictício
+Globo Esporte,Share,2022-09,28.735313,DEMO fictício
+Globo Esporte,Audiência,2022-10,10.652717,DEMO fictício
+Globo Esporte,Share,2022-10,28.08792,DEMO fictício
+Globo Esporte,Audiência,2022-11,10.700686,DEMO fictício
+Globo Esporte,Share,2022-11,27.13187,DEMO fictício
+Globo Esporte,Audiência,2022-12,10.233952,DEMO fictício
+Globo Esporte,Share,2022-12,26.133859,DEMO fictício
+Globo Esporte,Audiência,2023-01,10.49602,DEMO fictício
+Globo Esporte,Share,2023-01,25.722106,DEMO fictício
+Globo Esporte,Audiência,2023-02,11.057868,DEMO fictício
+Globo Esporte,Share,2023-02,26.598297,DEMO fictício
+Globo Esporte,Audiência,2023-03,11.922452,DEMO fictício
+Globo Esporte,Share,2023-03,27.16246,DEMO fictício
+Globo Esporte,Audiência,2023-04,12.279384,DEMO fictício
+Globo Esporte,Share,2023-04,28.474661,DEMO fictício
+Globo Esporte,Audiência,2023-05,13.003267,DEMO fictício
+Globo Esporte,Share,2023-05,27.482669,DEMO fictício
+Globo Esporte,Audiência,2023-06,12.701947,DEMO fictício
+Globo Esporte,Share,2023-06,28.192095,DEMO fictício
+Globo Esporte,Audiência,2023-07,12.966433,DEMO fictício
+Globo Esporte,Share,2023-07,28.9679,DEMO fictício
+Globo Esporte,Audiência,2023-08,12.692223,DEMO fictício
+Globo Esporte,Share,2023-08,28.102637,DEMO fictício
+Globo Esporte,Audiência,2023-09,11.804891,DEMO fictício
+Globo Esporte,Share,2023-09,27.294309,DEMO fictício
+Globo Esporte,Audiência,2023-10,11.047575,DEMO fictício
+Globo Esporte,Share,2023-10,27.377898,DEMO fictício
+Globo Esporte,Audiência,2023-11,10.842037,DEMO fictício
+Globo Esporte,Share,2023-11,27.158015,DEMO fictício
+Globo Esporte,Audiência,2023-12,10.69449,DEMO fictício
+Globo Esporte,Share,2023-12,26.750307,DEMO fictício
+Globo Esporte,Audiência,2024-01,11.493316,DEMO fictício
+Globo Esporte,Share,2024-01,26.249925,DEMO fictício
+Globo Esporte,Audiência,2024-02,11.456366,DEMO fictício
+Globo Esporte,Share,2024-02,28.386597,DEMO fictício
+Globo Esporte,Audiência,2024-03,11.204034,DEMO fictício
+Globo Esporte,Share,2024-03,28.84566,DEMO fictício
+Globo Esporte,Audiência,2024-04,12.691712,DEMO fictício
+Globo Esporte,Share,2024-04,28.225612,DEMO fictício
+Globo Esporte,Audiência,2024-05,13.58911,DEMO fictício
+Globo Esporte,Share,2024-05,29.25983,DEMO fictício
+Globo Esporte,Audiência,2024-06,13.702112,DEMO fictício
+Globo Esporte,Share,2024-06,28.768312,DEMO fictício
+Globo Esporte,Audiência,2024-07,13.152893,DEMO fictício
+Globo Esporte,Share,2024-07,29.056737,DEMO fictício
+Globo Esporte,Audiência,2024-08,12.552714,DEMO fictício
+Globo Esporte,Share,2024-08,29.542032,DEMO fictício
+Globo Esporte,Audiência,2024-09,12.419519,DEMO fictício
+Globo Esporte,Share,2024-09,29.375021,DEMO fictício
+Globo Esporte,Audiência,2024-10,12.505566,DEMO fictício
+Globo Esporte,Share,2024-10,28.078041,DEMO fictício
+Globo Esporte,Audiência,2024-11,11.881801,DEMO fictício
+Globo Esporte,Share,2024-11,27.863855,DEMO fictício
+Globo Esporte,Audiência,2024-12,11.580069,DEMO fictício
+Globo Esporte,Share,2024-12,26.965723,DEMO fictício
+Globo Esporte,Audiência,2025-01,10.964029,DEMO fictício
+Globo Esporte,Share,2025-01,26.96974,DEMO fictício
+Globo Esporte,Audiência,2025-02,11.424246,DEMO fictício
+Globo Esporte,Share,2025-02,27.753189,DEMO fictício
+Globo Esporte,Audiência,2025-03,12.283336,DEMO fictício
+Globo Esporte,Share,2025-03,28.527494,DEMO fictício
+Globo Esporte,Audiência,2025-04,12.062039,DEMO fictício
+Globo Esporte,Share,2025-04,28.406178,DEMO fictício
+Globo Esporte,Audiência,2025-05,12.195369,DEMO fictício
+Globo Esporte,Share,2025-05,28.409913,DEMO fictício
+Globo Esporte,Audiência,2025-06,12.803869,DEMO fictício
+Globo Esporte,Share,2025-06,27.506619,DEMO fictício
+Globo Esporte,Audiência,2025-07,12.688891,DEMO fictício
+Globo Esporte,Share,2025-07,26.986135,DEMO fictício
+Globo Esporte,Audiência,2025-08,11.964988,DEMO fictício
+Globo Esporte,Share,2025-08,27.928895,DEMO fictício
+Globo Esporte,Audiência,2025-09,11.412608,DEMO fictício
+Globo Esporte,Share,2025-09,27.856384,DEMO fictício
+Globo Esporte,Audiência,2025-10,11.589523,DEMO fictício
+Globo Esporte,Share,2025-10,27.714062,DEMO fictício
+Globo Esporte,Audiência,2025-11,10.796024,DEMO fictício
+Globo Esporte,Share,2025-11,27.460289,DEMO fictício
+Globo Esporte,Audiência,2025-12,11.075921,DEMO fictício
+Globo Esporte,Share,2025-12,26.160421,DEMO fictício
+Globo Esporte,Audiência,2026-01,11.222467,DEMO fictício
+Globo Esporte,Share,2026-01,26.67695,DEMO fictício
+Globo Esporte,Audiência,2026-02,11.324069,DEMO fictício
+Globo Esporte,Share,2026-02,26.271156,DEMO fictício
+Globo Esporte,Audiência,2026-03,11.984724,DEMO fictício
+Globo Esporte,Share,2026-03,28.568905,DEMO fictício
+Globo Esporte,Audiência,2026-04,11.907624,DEMO fictício
+Globo Esporte,Share,2026-04,30.051209,DEMO fictício
+Globo Esporte,Audiência,2026-05,12.255598,DEMO fictício
+Globo Esporte,Share,2026-05,29.41545,DEMO fictício
+Globo Esporte,Audiência,2026-06,12.035815,DEMO fictício
+Globo Esporte,Share,2026-06,29.309496,DEMO fictício
+Globo Esporte,Audiência,2026-07,12.221213,DEMO fictício
+Globo Esporte,Share,2026-07,29.634504,DEMO fictício
+Globo Esporte,Audiência,2026-08,11.698439,DEMO fictício
+Globo Esporte,Share,2026-08,28.601199,DEMO fictício
+Globo Esporte,Audiência,2026-09,11.579257,DEMO fictício
+Globo Esporte,Share,2026-09,27.419497,DEMO fictício
+BATV,Audiência,2020-01,22.844708,DEMO fictício
+BATV,Share,2020-01,43.070377,DEMO fictício
+BATV,Audiência,2020-02,22.541185,DEMO fictício
+BATV,Share,2020-02,43.530892,DEMO fictício
+BATV,Audiência,2020-03,22.477849,DEMO fictício
+BATV,Share,2020-03,45.281563,DEMO fictício
+BATV,Audiência,2020-04,23.215966,DEMO fictício
+BATV,Share,2020-04,44.078596,DEMO fictício
+BATV,Audiência,2020-05,24.799702,DEMO fictício
+BATV,Share,2020-05,45.191348,DEMO fictício
+BATV,Audiência,2020-06,24.956393,DEMO fictício
+BATV,Share,2020-06,46.486973,DEMO fictício
+BATV,Audiência,2020-07,26.359982,DEMO fictício
+BATV,Share,2020-07,46.329269,DEMO fictício
+BATV,Audiência,2020-08,24.979543,DEMO fictício
+BATV,Share,2020-08,45.882707,DEMO fictício
+BATV,Audiência,2020-09,23.528006,DEMO fictício
+BATV,Share,2020-09,45.551643,DEMO fictício
+BATV,Audiência,2020-10,21.666251,DEMO fictício
+BATV,Share,2020-10,43.621096,DEMO fictício
+BATV,Audiência,2020-11,21.996109,DEMO fictício
+BATV,Share,2020-11,42.844273,DEMO fictício
+BATV,Audiência,2020-12,22.527533,DEMO fictício
+BATV,Share,2020-12,42.53272,DEMO fictício
+BATV,Audiência,2021-01,20.327343,DEMO fictício
+BATV,Share,2021-01,42.230956,DEMO fictício
+BATV,Audiência,2021-02,21.947661,DEMO fictício
+BATV,Share,2021-02,43.79009,DEMO fictício
+BATV,Audiência,2021-03,22.298519,DEMO fictício
+BATV,Share,2021-03,45.474803,DEMO fictício
+BATV,Audiência,2021-04,24.624122,DEMO fictício
+BATV,Share,2021-04,46.508504,DEMO fictício
+BATV,Audiência,2021-05,24.706241,DEMO fictício
+BATV,Share,2021-05,45.416688,DEMO fictício
+BATV,Audiência,2021-06,24.74144,DEMO fictício
+BATV,Share,2021-06,45.877047,DEMO fictício
+BATV,Audiência,2021-07,24.656748,DEMO fictício
+BATV,Share,2021-07,45.726324,DEMO fictício
+BATV,Audiência,2021-08,23.517797,DEMO fictício
+BATV,Share,2021-08,43.039744,DEMO fictício
+BATV,Audiência,2021-09,24.48762,DEMO fictício
+BATV,Share,2021-09,43.587617,DEMO fictício
+BATV,Audiência,2021-10,25.248909,DEMO fictício
+BATV,Share,2021-10,43.374767,DEMO fictício
+BATV,Audiência,2021-11,25.799427,DEMO fictício
+BATV,Share,2021-11,45.854066,DEMO fictício
+BATV,Audiência,2021-12,23.904733,DEMO fictício
+BATV,Share,2021-12,46.379397,DEMO fictício
+BATV,Audiência,2022-01,24.364956,DEMO fictício
+BATV,Share,2022-01,45.633542,DEMO fictício
+BATV,Audiência,2022-02,23.60787,DEMO fictício
+BATV,Share,2022-02,43.593902,DEMO fictício
+BATV,Audiência,2022-03,24.443008,DEMO fictício
+BATV,Share,2022-03,43.643498,DEMO fictício
+BATV,Audiência,2022-04,26.026271,DEMO fictício
+BATV,Share,2022-04,44.64688,DEMO fictício
+BATV,Audiência,2022-05,24.759839,DEMO fictício
+BATV,Share,2022-05,44.123009,DEMO fictício
+BATV,Audiência,2022-06,25.23718,DEMO fictício
+BATV,Share,2022-06,47.47128,DEMO fictício
+BATV,Audiência,2022-07,26.025951,DEMO fictício
+BATV,Share,2022-07,45.92806,DEMO fictício
+BATV,Audiência,2022-08,25.660324,DEMO fictício
+BATV,Share,2022-08,45.326758,DEMO fictício
+BATV,Audiência,2022-09,25.552582,DEMO fictício
+BATV,Share,2022-09,44.740694,DEMO fictício
+BATV,Audiência,2022-10,22.92259,DEMO fictício
+BATV,Share,2022-10,44.802957,DEMO fictício
+BATV,Audiência,2022-11,24.424781,DEMO fictício
+BATV,Share,2022-11,43.13611,DEMO fictício
+BATV,Audiência,2022-12,25.050874,DEMO fictício
+BATV,Share,2022-12,42.960201,DEMO fictício
+BATV,Audiência,2023-01,23.961798,DEMO fictício
+BATV,Share,2023-01,41.778665,DEMO fictício
+BATV,Audiência,2023-02,22.980422,DEMO fictício
+BATV,Share,2023-02,43.151286,DEMO fictício
+BATV,Audiência,2023-03,23.840959,DEMO fictício
+BATV,Share,2023-03,43.622826,DEMO fictício
+BATV,Audiência,2023-04,25.241767,DEMO fictício
+BATV,Share,2023-04,42.928606,DEMO fictício
+BATV,Audiência,2023-05,25.345365,DEMO fictício
+BATV,Share,2023-05,43.458776,DEMO fictício
+BATV,Audiência,2023-06,26.782256,DEMO fictício
+BATV,Share,2023-06,45.870911,DEMO fictício
+BATV,Audiência,2023-07,25.020834,DEMO fictício
+BATV,Share,2023-07,47.320204,DEMO fictício
+BATV,Audiência,2023-08,24.036272,DEMO fictício
+BATV,Share,2023-08,45.78683,DEMO fictício
+BATV,Audiência,2023-09,24.24249,DEMO fictício
+BATV,Share,2023-09,46.490369,DEMO fictício
+BATV,Audiência,2023-10,23.832324,DEMO fictício
+BATV,Share,2023-10,45.942408,DEMO fictício
+BATV,Audiência,2023-11,22.325161,DEMO fictício
+BATV,Share,2023-11,46.016009,DEMO fictício
+BATV,Audiência,2023-12,22.535549,DEMO fictício
+BATV,Share,2023-12,44.891418,DEMO fictício
+BATV,Audiência,2024-01,22.204475,DEMO fictício
+BATV,Share,2024-01,45.759355,DEMO fictício
+BATV,Audiência,2024-02,23.576993,DEMO fictício
+BATV,Share,2024-02,45.397715,DEMO fictício
+BATV,Audiência,2024-03,23.765761,DEMO fictício
+BATV,Share,2024-03,45.206213,DEMO fictício
+BATV,Audiência,2024-04,25.530361,DEMO fictício
+BATV,Share,2024-04,43.474602,DEMO fictício
+BATV,Audiência,2024-05,25.258688,DEMO fictício
+BATV,Share,2024-05,44.664109,DEMO fictício
+BATV,Audiência,2024-06,24.612375,DEMO fictício
+BATV,Share,2024-06,45.187884,DEMO fictício
+BATV,Audiência,2024-07,24.08657,DEMO fictício
+BATV,Share,2024-07,46.292478,DEMO fictício
+BATV,Audiência,2024-08,24.764879,DEMO fictício
+BATV,Share,2024-08,45.867426,DEMO fictício
+BATV,Audiência,2024-09,23.953642,DEMO fictício
+BATV,Share,2024-09,44.713323,DEMO fictício
+BATV,Audiência,2024-10,22.592931,DEMO fictício
+BATV,Share,2024-10,43.343916,DEMO fictício
+BATV,Audiência,2024-11,21.823937,DEMO fictício
+BATV,Share,2024-11,45.207527,DEMO fictício
+BATV,Audiência,2024-12,22.579925,DEMO fictício
+BATV,Share,2024-12,45.094569,DEMO fictício
+BATV,Audiência,2025-01,22.736095,DEMO fictício
+BATV,Share,2025-01,44.836505,DEMO fictício
+BATV,Audiência,2025-02,23.507845,DEMO fictício
+BATV,Share,2025-02,43.792286,DEMO fictício
+BATV,Audiência,2025-03,24.490331,DEMO fictício
+BATV,Share,2025-03,45.363643,DEMO fictício
+BATV,Audiência,2025-04,25.252239,DEMO fictício
+BATV,Share,2025-04,47.844585,DEMO fictício
+BATV,Audiência,2025-05,25.234805,DEMO fictício
+BATV,Share,2025-05,48.046337,DEMO fictício
+BATV,Audiência,2025-06,27.030469,DEMO fictício
+BATV,Share,2025-06,46.873577,DEMO fictício
+BATV,Audiência,2025-07,26.826946,DEMO fictício
+BATV,Share,2025-07,47.786055,DEMO fictício
+BATV,Audiência,2025-08,25.655866,DEMO fictício
+BATV,Share,2025-08,46.460715,DEMO fictício
+BATV,Audiência,2025-09,24.095365,DEMO fictício
+BATV,Share,2025-09,44.009874,DEMO fictício
+BATV,Audiência,2025-10,25.137402,DEMO fictício
+BATV,Share,2025-10,44.397924,DEMO fictício
+BATV,Audiência,2025-11,24.488374,DEMO fictício
+BATV,Share,2025-11,44.803667,DEMO fictício
+BATV,Audiência,2025-12,24.286543,DEMO fictício
+BATV,Share,2025-12,44.004722,DEMO fictício
+BATV,Audiência,2026-01,25.364624,DEMO fictício
+BATV,Share,2026-01,44.164526,DEMO fictício
+BATV,Audiência,2026-02,25.510621,DEMO fictício
+BATV,Share,2026-02,43.123767,DEMO fictício
+BATV,Audiência,2026-03,25.245158,DEMO fictício
+BATV,Share,2026-03,43.281724,DEMO fictício
+BATV,Audiência,2026-04,26.032382,DEMO fictício
+BATV,Share,2026-04,42.561005,DEMO fictício
+BATV,Audiência,2026-05,25.350569,DEMO fictício
+BATV,Share,2026-05,43.294076,DEMO fictício
+BATV,Audiência,2026-06,24.674451,DEMO fictício
+BATV,Share,2026-06,44.973789,DEMO fictício
+BATV,Audiência,2026-07,27.00087,DEMO fictício
+BATV,Share,2026-07,44.645782,DEMO fictício
+BATV,Audiência,2026-08,27.062621,DEMO fictício
+BATV,Share,2026-08,46.176446,DEMO fictício
+BATV,Audiência,2026-09,23.883006,DEMO fictício
+BATV,Share,2026-09,45.6194,DEMO fictício
+Bom Dia Sábado,Audiência,2020-01,7.637165,DEMO fictício
+Bom Dia Sábado,Share,2020-01,40.080056,DEMO fictício
+Bom Dia Sábado,Audiência,2020-02,7.672539,DEMO fictício
+Bom Dia Sábado,Share,2020-02,40.312569,DEMO fictício
+Bom Dia Sábado,Audiência,2020-03,8.0106,DEMO fictício
+Bom Dia Sábado,Share,2020-03,40.025117,DEMO fictício
+Bom Dia Sábado,Audiência,2020-04,8.314992,DEMO fictício
+Bom Dia Sábado,Share,2020-04,42.338746,DEMO fictício
+Bom Dia Sábado,Audiência,2020-05,9.010801,DEMO fictício
+Bom Dia Sábado,Share,2020-05,44.940049,DEMO fictício
+Bom Dia Sábado,Audiência,2020-06,8.213558,DEMO fictício
+Bom Dia Sábado,Share,2020-06,43.22499,DEMO fictício
+Bom Dia Sábado,Audiência,2020-07,8.430059,DEMO fictício
+Bom Dia Sábado,Share,2020-07,43.002983,DEMO fictício
+Bom Dia Sábado,Audiência,2020-08,8.288394,DEMO fictício
+Bom Dia Sábado,Share,2020-08,41.390228,DEMO fictício
+Bom Dia Sábado,Audiência,2020-09,8.235393,DEMO fictício
+Bom Dia Sábado,Share,2020-09,39.519478,DEMO fictício
+Bom Dia Sábado,Audiência,2020-10,7.635123,DEMO fictício
+Bom Dia Sábado,Share,2020-10,39.533598,DEMO fictício
+Bom Dia Sábado,Audiência,2020-11,7.529807,DEMO fictício
+Bom Dia Sábado,Share,2020-11,39.098974,DEMO fictício
+Bom Dia Sábado,Audiência,2020-12,7.768825,DEMO fictício
+Bom Dia Sábado,Share,2020-12,40.1729,DEMO fictício
+Bom Dia Sábado,Audiência,2021-01,8.092199,DEMO fictício
+Bom Dia Sábado,Share,2021-01,41.0414,DEMO fictício
+Bom Dia Sábado,Audiência,2021-02,8.292384,DEMO fictício
+Bom Dia Sábado,Share,2021-02,41.403607,DEMO fictício
+Bom Dia Sábado,Audiência,2021-03,8.46382,DEMO fictício
+Bom Dia Sábado,Share,2021-03,42.714235,DEMO fictício
+Bom Dia Sábado,Audiência,2021-04,8.393897,DEMO fictício
+Bom Dia Sábado,Share,2021-04,42.62463,DEMO fictício
+Bom Dia Sábado,Audiência,2021-05,8.861898,DEMO fictício
+Bom Dia Sábado,Share,2021-05,42.904409,DEMO fictício
+Bom Dia Sábado,Audiência,2021-06,8.256727,DEMO fictício
+Bom Dia Sábado,Share,2021-06,43.974083,DEMO fictício
+Bom Dia Sábado,Audiência,2021-07,8.327756,DEMO fictício
+Bom Dia Sábado,Share,2021-07,43.312807,DEMO fictício
+Bom Dia Sábado,Audiência,2021-08,8.078218,DEMO fictício
+Bom Dia Sábado,Share,2021-08,41.295073,DEMO fictício
+Bom Dia Sábado,Audiência,2021-09,8.381102,DEMO fictício
+Bom Dia Sábado,Share,2021-09,40.161212,DEMO fictício
+Bom Dia Sábado,Audiência,2021-10,7.580987,DEMO fictício
+Bom Dia Sábado,Share,2021-10,39.934235,DEMO fictício
+Bom Dia Sábado,Audiência,2021-11,7.352535,DEMO fictício
+Bom Dia Sábado,Share,2021-11,40.286181,DEMO fictício
+Bom Dia Sábado,Audiência,2021-12,7.043595,DEMO fictício
+Bom Dia Sábado,Share,2021-12,41.952675,DEMO fictício
+Bom Dia Sábado,Audiência,2022-01,7.605351,DEMO fictício
+Bom Dia Sábado,Share,2022-01,40.562441,DEMO fictício
+Bom Dia Sábado,Audiência,2022-02,7.760024,DEMO fictício
+Bom Dia Sábado,Share,2022-02,42.580929,DEMO fictício
+Bom Dia Sábado,Audiência,2022-03,7.579996,DEMO fictício
+Bom Dia Sábado,Share,2022-03,41.559268,DEMO fictício
+Bom Dia Sábado,Audiência,2022-04,8.208802,DEMO fictício
+Bom Dia Sábado,Share,2022-04,41.366431,DEMO fictício
+Bom Dia Sábado,Audiência,2022-05,8.190607,DEMO fictício
+Bom Dia Sábado,Share,2022-05,42.757137,DEMO fictício
+Bom Dia Sábado,Audiência,2022-06,8.078276,DEMO fictício
+Bom Dia Sábado,Share,2022-06,43.578711,DEMO fictício
+Bom Dia Sábado,Audiência,2022-07,8.259361,DEMO fictício
+Bom Dia Sábado,Share,2022-07,42.755437,DEMO fictício
+Bom Dia Sábado,Audiência,2022-08,7.968903,DEMO fictício
+Bom Dia Sábado,Share,2022-08,41.368196,DEMO fictício
+Bom Dia Sábado,Audiência,2022-09,7.906028,DEMO fictício
+Bom Dia Sábado,Share,2022-09,42.015219,DEMO fictício
+Bom Dia Sábado,Audiência,2022-10,7.638192,DEMO fictício
+Bom Dia Sábado,Share,2022-10,40.296298,DEMO fictício
+Bom Dia Sábado,Audiência,2022-11,7.897113,DEMO fictício
+Bom Dia Sábado,Share,2022-11,40.245119,DEMO fictício
+Bom Dia Sábado,Audiência,2022-12,7.515522,DEMO fictício
+Bom Dia Sábado,Share,2022-12,40.16513,DEMO fictício
+Bom Dia Sábado,Audiência,2023-01,8.296996,DEMO fictício
+Bom Dia Sábado,Share,2023-01,40.130116,DEMO fictício
+Bom Dia Sábado,Audiência,2023-02,8.241288,DEMO fictício
+Bom Dia Sábado,Share,2023-02,40.470297,DEMO fictício
+Bom Dia Sábado,Audiência,2023-03,8.333303,DEMO fictício
+Bom Dia Sábado,Share,2023-03,43.248145,DEMO fictício
+Bom Dia Sábado,Audiência,2023-04,8.278966,DEMO fictício
+Bom Dia Sábado,Share,2023-04,45.001926,DEMO fictício
+Bom Dia Sábado,Audiência,2023-05,7.451965,DEMO fictício
+Bom Dia Sábado,Share,2023-05,43.780979,DEMO fictício
+Bom Dia Sábado,Audiência,2023-06,7.221432,DEMO fictício
+Bom Dia Sábado,Share,2023-06,42.854934,DEMO fictício
+Bom Dia Sábado,Audiência,2023-07,7.532896,DEMO fictício
+Bom Dia Sábado,Share,2023-07,41.830519,DEMO fictício
+Bom Dia Sábado,Audiência,2023-08,7.246469,DEMO fictício
+Bom Dia Sábado,Share,2023-08,40.020623,DEMO fictício
+Bom Dia Sábado,Audiência,2023-09,7.400254,DEMO fictício
+Bom Dia Sábado,Share,2023-09,38.943761,DEMO fictício
+Bom Dia Sábado,Audiência,2023-10,7.149854,DEMO fictício
+Bom Dia Sábado,Share,2023-10,40.388025,DEMO fictício
+Bom Dia Sábado,Audiência,2023-11,7.140418,DEMO fictício
+Bom Dia Sábado,Share,2023-11,39.999786,DEMO fictício
+Bom Dia Sábado,Audiência,2023-12,7.370991,DEMO fictício
+Bom Dia Sábado,Share,2023-12,39.585829,DEMO fictício
+Bom Dia Sábado,Audiência,2024-01,7.657198,DEMO fictício
+Bom Dia Sábado,Share,2024-01,39.094236,DEMO fictício
+Bom Dia Sábado,Audiência,2024-02,8.265922,DEMO fictício
+Bom Dia Sábado,Share,2024-02,40.662448,DEMO fictício
+Bom Dia Sábado,Audiência,2024-03,8.400023,DEMO fictício
+Bom Dia Sábado,Share,2024-03,42.542573,DEMO fictício
+Bom Dia Sábado,Audiência,2024-04,8.568211,DEMO fictício
+Bom Dia Sábado,Share,2024-04,42.899175,DEMO fictício
+Bom Dia Sábado,Audiência,2024-05,8.722359,DEMO fictício
+Bom Dia Sábado,Share,2024-05,41.92665,DEMO fictício
+Bom Dia Sábado,Audiência,2024-06,8.621201,DEMO fictício
+Bom Dia Sábado,Share,2024-06,42.609661,DEMO fictício
+Bom Dia Sábado,Audiência,2024-07,8.042606,DEMO fictício
+Bom Dia Sábado,Share,2024-07,41.791277,DEMO fictício
+Bom Dia Sábado,Audiência,2024-08,7.672444,DEMO fictício
+Bom Dia Sábado,Share,2024-08,41.377105,DEMO fictício
+Bom Dia Sábado,Audiência,2024-09,7.535546,DEMO fictício
+Bom Dia Sábado,Share,2024-09,41.458674,DEMO fictício
+Bom Dia Sábado,Audiência,2024-10,7.209123,DEMO fictício
+Bom Dia Sábado,Share,2024-10,39.726419,DEMO fictício
+Bom Dia Sábado,Audiência,2024-11,7.239295,DEMO fictício
+Bom Dia Sábado,Share,2024-11,39.754336,DEMO fictício
+Bom Dia Sábado,Audiência,2024-12,7.374875,DEMO fictício
+Bom Dia Sábado,Share,2024-12,40.871034,DEMO fictício
+Bom Dia Sábado,Audiência,2025-01,6.957868,DEMO fictício
+Bom Dia Sábado,Share,2025-01,40.775591,DEMO fictício
+Bom Dia Sábado,Audiência,2025-02,7.449322,DEMO fictício
+Bom Dia Sábado,Share,2025-02,40.7324,DEMO fictício
+Bom Dia Sábado,Audiência,2025-03,7.886385,DEMO fictício
+Bom Dia Sábado,Share,2025-03,41.975231,DEMO fictício
+Bom Dia Sábado,Audiência,2025-04,7.500634,DEMO fictício
+Bom Dia Sábado,Share,2025-04,42.434553,DEMO fictício
+Bom Dia Sábado,Audiência,2025-05,7.80366,DEMO fictício
+Bom Dia Sábado,Share,2025-05,42.324819,DEMO fictício
+Bom Dia Sábado,Audiência,2025-06,7.75597,DEMO fictício
+Bom Dia Sábado,Share,2025-06,42.56701,DEMO fictício
+Bom Dia Sábado,Audiência,2025-07,7.618218,DEMO fictício
+Bom Dia Sábado,Share,2025-07,42.840784,DEMO fictício
+Bom Dia Sábado,Audiência,2025-08,7.03894,DEMO fictício
+Bom Dia Sábado,Share,2025-08,39.692015,DEMO fictício
+Bom Dia Sábado,Audiência,2025-09,6.892661,DEMO fictício
+Bom Dia Sábado,Share,2025-09,39.612985,DEMO fictício
+Bom Dia Sábado,Audiência,2025-10,6.813053,DEMO fictício
+Bom Dia Sábado,Share,2025-10,39.66873,DEMO fictício
+Bom Dia Sábado,Audiência,2025-11,6.643807,DEMO fictício
+Bom Dia Sábado,Share,2025-11,39.127218,DEMO fictício
+Bom Dia Sábado,Audiência,2025-12,7.207176,DEMO fictício
+Bom Dia Sábado,Share,2025-12,41.010677,DEMO fictício
+Bom Dia Sábado,Audiência,2026-01,7.093125,DEMO fictício
+Bom Dia Sábado,Share,2026-01,39.409501,DEMO fictício
+Bom Dia Sábado,Audiência,2026-02,7.148758,DEMO fictício
+Bom Dia Sábado,Share,2026-02,40.60219,DEMO fictício
+Bom Dia Sábado,Audiência,2026-03,8.160835,DEMO fictício
+Bom Dia Sábado,Share,2026-03,40.13131,DEMO fictício
+Bom Dia Sábado,Audiência,2026-04,8.452278,DEMO fictício
+Bom Dia Sábado,Share,2026-04,43.120892,DEMO fictício
+Bom Dia Sábado,Audiência,2026-05,8.501152,DEMO fictício
+Bom Dia Sábado,Share,2026-05,42.592317,DEMO fictício
+Bom Dia Sábado,Audiência,2026-06,8.308363,DEMO fictício
+Bom Dia Sábado,Share,2026-06,42.033895,DEMO fictício
+Bom Dia Sábado,Audiência,2026-07,8.201738,DEMO fictício
+Bom Dia Sábado,Share,2026-07,41.453828,DEMO fictício
+Bom Dia Sábado,Audiência,2026-08,7.555445,DEMO fictício
+Bom Dia Sábado,Share,2026-08,40.358906,DEMO fictício
+Bom Dia Sábado,Audiência,2026-09,7.425464,DEMO fictício
+Bom Dia Sábado,Share,2026-09,40.275816,DEMO fictício
+Conexão Bahia,Audiência,2020-01,9.565826,DEMO fictício
+Conexão Bahia,Share,2020-01,35.555262,DEMO fictício
+Conexão Bahia,Audiência,2020-02,9.64212,DEMO fictício
+Conexão Bahia,Share,2020-02,35.027614,DEMO fictício
+Conexão Bahia,Audiência,2020-03,9.307585,DEMO fictício
+Conexão Bahia,Share,2020-03,35.450847,DEMO fictício
+Conexão Bahia,Audiência,2020-04,9.743996,DEMO fictício
+Conexão Bahia,Share,2020-04,36.909173,DEMO fictício
+Conexão Bahia,Audiência,2020-05,10.007218,DEMO fictício
+Conexão Bahia,Share,2020-05,36.383502,DEMO fictício
+Conexão Bahia,Audiência,2020-06,9.917942,DEMO fictício
+Conexão Bahia,Share,2020-06,38.301794,DEMO fictício
+Conexão Bahia,Audiência,2020-07,10.713595,DEMO fictício
+Conexão Bahia,Share,2020-07,39.660757,DEMO fictício
+Conexão Bahia,Audiência,2020-08,9.998335,DEMO fictício
+Conexão Bahia,Share,2020-08,38.631833,DEMO fictício
+Conexão Bahia,Audiência,2020-09,9.954621,DEMO fictício
+Conexão Bahia,Share,2020-09,38.846577,DEMO fictício
+Conexão Bahia,Audiência,2020-10,9.681577,DEMO fictício
+Conexão Bahia,Share,2020-10,37.027761,DEMO fictício
+Conexão Bahia,Audiência,2020-11,9.982027,DEMO fictício
+Conexão Bahia,Share,2020-11,36.062952,DEMO fictício
+Conexão Bahia,Audiência,2020-12,9.611842,DEMO fictício
+Conexão Bahia,Share,2020-12,35.837827,DEMO fictício
+Conexão Bahia,Audiência,2021-01,8.806144,DEMO fictício
+Conexão Bahia,Share,2021-01,35.341158,DEMO fictício
+Conexão Bahia,Audiência,2021-02,8.815557,DEMO fictício
+Conexão Bahia,Share,2021-02,35.36191,DEMO fictício
+Conexão Bahia,Audiência,2021-03,9.211659,DEMO fictício
+Conexão Bahia,Share,2021-03,35.379421,DEMO fictício
+Conexão Bahia,Audiência,2021-04,9.359643,DEMO fictício
+Conexão Bahia,Share,2021-04,36.399734,DEMO fictício
+Conexão Bahia,Audiência,2021-05,9.27105,DEMO fictício
+Conexão Bahia,Share,2021-05,37.970356,DEMO fictício
+Conexão Bahia,Audiência,2021-06,9.972881,DEMO fictício
+Conexão Bahia,Share,2021-06,38.974412,DEMO fictício
+Conexão Bahia,Audiência,2021-07,9.568679,DEMO fictício
+Conexão Bahia,Share,2021-07,38.081617,DEMO fictício
+Conexão Bahia,Audiência,2021-08,10.197308,DEMO fictício
+Conexão Bahia,Share,2021-08,38.380389,DEMO fictício
+Conexão Bahia,Audiência,2021-09,10.191616,DEMO fictício
+Conexão Bahia,Share,2021-09,38.447155,DEMO fictício
+Conexão Bahia,Audiência,2021-10,10.038924,DEMO fictício
+Conexão Bahia,Share,2021-10,36.2381,DEMO fictício
+Conexão Bahia,Audiência,2021-11,9.456918,DEMO fictício
+Conexão Bahia,Share,2021-11,34.693281,DEMO fictício
+Conexão Bahia,Audiência,2021-12,9.159489,DEMO fictício
+Conexão Bahia,Share,2021-12,36.418772,DEMO fictício
+Conexão Bahia,Audiência,2022-01,8.948983,DEMO fictício
+Conexão Bahia,Share,2022-01,35.742481,DEMO fictício
+Conexão Bahia,Audiência,2022-02,9.019915,DEMO fictício
+Conexão Bahia,Share,2022-02,35.773879,DEMO fictício
+Conexão Bahia,Audiência,2022-03,9.413887,DEMO fictício
+Conexão Bahia,Share,2022-03,35.783008,DEMO fictício
+Conexão Bahia,Audiência,2022-04,9.962607,DEMO fictício
+Conexão Bahia,Share,2022-04,35.981149,DEMO fictício
+Conexão Bahia,Audiência,2022-05,9.817719,DEMO fictício
+Conexão Bahia,Share,2022-05,37.866854,DEMO fictício
+Conexão Bahia,Audiência,2022-06,9.746645,DEMO fictício
+Conexão Bahia,Share,2022-06,38.857316,DEMO fictício
+Conexão Bahia,Audiência,2022-07,9.769072,DEMO fictício
+Conexão Bahia,Share,2022-07,38.722001,DEMO fictício
+Conexão Bahia,Audiência,2022-08,10.465726,DEMO fictício
+Conexão Bahia,Share,2022-08,39.23601,DEMO fictício
+Conexão Bahia,Audiência,2022-09,10.88653,DEMO fictício
+Conexão Bahia,Share,2022-09,38.148467,DEMO fictício
+Conexão Bahia,Audiência,2022-10,10.59959,DEMO fictício
+Conexão Bahia,Share,2022-10,37.074905,DEMO fictício
+Conexão Bahia,Audiência,2022-11,10.476937,DEMO fictício
+Conexão Bahia,Share,2022-11,37.938311,DEMO fictício
+Conexão Bahia,Audiência,2022-12,9.600811,DEMO fictício
+Conexão Bahia,Share,2022-12,37.292195,DEMO fictício
+Conexão Bahia,Audiência,2023-01,9.263169,DEMO fictício
+Conexão Bahia,Share,2023-01,36.101383,DEMO fictício
+Conexão Bahia,Audiência,2023-02,9.237502,DEMO fictício
+Conexão Bahia,Share,2023-02,36.619675,DEMO fictício
+Conexão Bahia,Audiência,2023-03,9.698781,DEMO fictício
+Conexão Bahia,Share,2023-03,36.300856,DEMO fictício
+Conexão Bahia,Audiência,2023-04,10.214177,DEMO fictício
+Conexão Bahia,Share,2023-04,35.720153,DEMO fictício
+Conexão Bahia,Audiência,2023-05,9.57596,DEMO fictício
+Conexão Bahia,Share,2023-05,38.064487,DEMO fictício
+Conexão Bahia,Audiência,2023-06,10.06508,DEMO fictício
+Conexão Bahia,Share,2023-06,38.715563,DEMO fictício
+Conexão Bahia,Audiência,2023-07,10.173071,DEMO fictício
+Conexão Bahia,Share,2023-07,38.814844,DEMO fictício
+Conexão Bahia,Audiência,2023-08,10.40856,DEMO fictício
+Conexão Bahia,Share,2023-08,39.096877,DEMO fictício
+Conexão Bahia,Audiência,2023-09,10.146082,DEMO fictício
+Conexão Bahia,Share,2023-09,40.938325,DEMO fictício
+Conexão Bahia,Audiência,2023-10,9.520605,DEMO fictício
+Conexão Bahia,Share,2023-10,39.502525,DEMO fictício
+Conexão Bahia,Audiência,2023-11,9.731153,DEMO fictício
+Conexão Bahia,Share,2023-11,36.229826,DEMO fictício
+Conexão Bahia,Audiência,2023-12,9.355296,DEMO fictício
+Conexão Bahia,Share,2023-12,36.078849,DEMO fictício
+Conexão Bahia,Audiência,2024-01,9.446935,DEMO fictício
+Conexão Bahia,Share,2024-01,37.15988,DEMO fictício
+Conexão Bahia,Audiência,2024-02,8.743967,DEMO fictício
+Conexão Bahia,Share,2024-02,36.236603,DEMO fictício
+Conexão Bahia,Audiência,2024-03,9.191287,DEMO fictício
+Conexão Bahia,Share,2024-03,36.84089,DEMO fictício
+Conexão Bahia,Audiência,2024-04,9.581189,DEMO fictício
+Conexão Bahia,Share,2024-04,37.819613,DEMO fictício
+Conexão Bahia,Audiência,2024-05,9.783275,DEMO fictício
+Conexão Bahia,Share,2024-05,37.403113,DEMO fictício
+Conexão Bahia,Audiência,2024-06,10.457451,DEMO fictício
+Conexão Bahia,Share,2024-06,37.243072,DEMO fictício
+Conexão Bahia,Audiência,2024-07,10.152882,DEMO fictício
+Conexão Bahia,Share,2024-07,37.394684,DEMO fictício
+Conexão Bahia,Audiência,2024-08,10.708605,DEMO fictício
+Conexão Bahia,Share,2024-08,36.467466,DEMO fictício
+Conexão Bahia,Audiência,2024-09,10.960899,DEMO fictício
+Conexão Bahia,Share,2024-09,37.189199,DEMO fictício
+Conexão Bahia,Audiência,2024-10,10.532575,DEMO fictício
+Conexão Bahia,Share,2024-10,36.400344,DEMO fictício
+Conexão Bahia,Audiência,2024-11,10.006983,DEMO fictício
+Conexão Bahia,Share,2024-11,36.563771,DEMO fictício
+Conexão Bahia,Audiência,2024-12,10.572905,DEMO fictício
+Conexão Bahia,Share,2024-12,37.282763,DEMO fictício
+Conexão Bahia,Audiência,2025-01,10.101188,DEMO fictício
+Conexão Bahia,Share,2025-01,37.339606,DEMO fictício
+Conexão Bahia,Audiência,2025-02,9.395329,DEMO fictício
+Conexão Bahia,Share,2025-02,37.318248,DEMO fictício
+Conexão Bahia,Audiência,2025-03,9.539941,DEMO fictício
+Conexão Bahia,Share,2025-03,37.156794,DEMO fictício
+Conexão Bahia,Audiência,2025-04,9.459542,DEMO fictício
+Conexão Bahia,Share,2025-04,37.231283,DEMO fictício
+Conexão Bahia,Audiência,2025-05,9.918965,DEMO fictício
+Conexão Bahia,Share,2025-05,36.849715,DEMO fictício
+Conexão Bahia,Audiência,2025-06,10.321778,DEMO fictício
+Conexão Bahia,Share,2025-06,37.933249,DEMO fictício
+Conexão Bahia,Audiência,2025-07,10.606715,DEMO fictício
+Conexão Bahia,Share,2025-07,37.714989,DEMO fictício
+Conexão Bahia,Audiência,2025-08,10.593264,DEMO fictício
+Conexão Bahia,Share,2025-08,38.323228,DEMO fictício
+Conexão Bahia,Audiência,2025-09,10.713103,DEMO fictício
+Conexão Bahia,Share,2025-09,37.968278,DEMO fictício
+Conexão Bahia,Audiência,2025-10,10.692603,DEMO fictício
+Conexão Bahia,Share,2025-10,38.647534,DEMO fictício
+Conexão Bahia,Audiência,2025-11,10.87898,DEMO fictício
+Conexão Bahia,Share,2025-11,38.333249,DEMO fictício
+Conexão Bahia,Audiência,2025-12,10.132538,DEMO fictício
+Conexão Bahia,Share,2025-12,37.772283,DEMO fictício
+Conexão Bahia,Audiência,2026-01,9.955745,DEMO fictício
+Conexão Bahia,Share,2026-01,34.676894,DEMO fictício
+Conexão Bahia,Audiência,2026-02,9.763098,DEMO fictício
+Conexão Bahia,Share,2026-02,35.837468,DEMO fictício
+Conexão Bahia,Audiência,2026-03,9.100567,DEMO fictício
+Conexão Bahia,Share,2026-03,36.086537,DEMO fictício
+Conexão Bahia,Audiência,2026-04,9.182041,DEMO fictício
+Conexão Bahia,Share,2026-04,37.5465,DEMO fictício
+Conexão Bahia,Audiência,2026-05,9.728001,DEMO fictício
+Conexão Bahia,Share,2026-05,38.6296,DEMO fictício
+Conexão Bahia,Audiência,2026-06,10.222261,DEMO fictício
+Conexão Bahia,Share,2026-06,40.630777,DEMO fictício
+Conexão Bahia,Audiência,2026-07,10.534793,DEMO fictício
+Conexão Bahia,Share,2026-07,39.360269,DEMO fictício
+Conexão Bahia,Audiência,2026-08,10.607334,DEMO fictício
+Conexão Bahia,Share,2026-08,39.958433,DEMO fictício
+Conexão Bahia,Audiência,2026-09,10.865396,DEMO fictício
+Conexão Bahia,Share,2026-09,39.064375,DEMO fictício
+Panela de Bairro,Audiência,2020-01,10.018318,DEMO fictício
+Panela de Bairro,Share,2020-01,32.66288,DEMO fictício
+Panela de Bairro,Audiência,2020-02,9.794893,DEMO fictício
+Panela de Bairro,Share,2020-02,34.436135,DEMO fictício
+Panela de Bairro,Audiência,2020-03,10.514157,DEMO fictício
+Panela de Bairro,Share,2020-03,33.542181,DEMO fictício
+Panela de Bairro,Audiência,2020-04,11.673409,DEMO fictício
+Panela de Bairro,Share,2020-04,34.026219,DEMO fictício
+Panela de Bairro,Audiência,2020-05,12.116385,DEMO fictício
+Panela de Bairro,Share,2020-05,34.479735,DEMO fictício
+Panela de Bairro,Audiência,2020-06,12.441899,DEMO fictício
+Panela de Bairro,Share,2020-06,35.283043,DEMO fictício
+Panela de Bairro,Audiência,2020-07,12.394288,DEMO fictício
+Panela de Bairro,Share,2020-07,35.518798,DEMO fictício
+Panela de Bairro,Audiência,2020-08,11.792129,DEMO fictício
+Panela de Bairro,Share,2020-08,34.746012,DEMO fictício
+Panela de Bairro,Audiência,2020-09,11.246374,DEMO fictício
+Panela de Bairro,Share,2020-09,34.491568,DEMO fictício
+Panela de Bairro,Audiência,2020-10,10.466097,DEMO fictício
+Panela de Bairro,Share,2020-10,32.801252,DEMO fictício
+Panela de Bairro,Audiência,2020-11,10.08264,DEMO fictício
+Panela de Bairro,Share,2020-11,32.232122,DEMO fictício
+Panela de Bairro,Audiência,2020-12,10.224491,DEMO fictício
+Panela de Bairro,Share,2020-12,31.562359,DEMO fictício
+Panela de Bairro,Audiência,2021-01,10.230254,DEMO fictício
+Panela de Bairro,Share,2021-01,31.386766,DEMO fictício
+Panela de Bairro,Audiência,2021-02,10.6988,DEMO fictício
+Panela de Bairro,Share,2021-02,32.194977,DEMO fictício
+Panela de Bairro,Audiência,2021-03,10.837395,DEMO fictício
+Panela de Bairro,Share,2021-03,32.504367,DEMO fictício
+Panela de Bairro,Audiência,2021-04,11.099214,DEMO fictício
+Panela de Bairro,Share,2021-04,32.970522,DEMO fictício
+Panela de Bairro,Audiência,2021-05,12.094167,DEMO fictício
+Panela de Bairro,Share,2021-05,33.700963,DEMO fictício
+Panela de Bairro,Audiência,2021-06,12.585853,DEMO fictício
+Panela de Bairro,Share,2021-06,33.710699,DEMO fictício
+Panela de Bairro,Audiência,2021-07,11.712103,DEMO fictício
+Panela de Bairro,Share,2021-07,33.798447,DEMO fictício
+Panela de Bairro,Audiência,2021-08,11.553415,DEMO fictício
+Panela de Bairro,Share,2021-08,34.586096,DEMO fictício
+Panela de Bairro,Audiência,2021-09,11.356484,DEMO fictício
+Panela de Bairro,Share,2021-09,32.559763,DEMO fictício
+Panela de Bairro,Audiência,2021-10,11.485513,DEMO fictício
+Panela de Bairro,Share,2021-10,31.669461,DEMO fictício
+Panela de Bairro,Audiência,2021-11,11.085599,DEMO fictício
+Panela de Bairro,Share,2021-11,33.356794,DEMO fictício
+Panela de Bairro,Audiência,2021-12,11.295229,DEMO fictício
+Panela de Bairro,Share,2021-12,34.075523,DEMO fictício
+Panela de Bairro,Audiência,2022-01,11.522758,DEMO fictício
+Panela de Bairro,Share,2022-01,33.351803,DEMO fictício
+Panela de Bairro,Audiência,2022-02,11.528065,DEMO fictício
+Panela de Bairro,Share,2022-02,33.472222,DEMO fictício
+Panela de Bairro,Audiência,2022-03,11.184915,DEMO fictício
+Panela de Bairro,Share,2022-03,33.640777,DEMO fictício
+Panela de Bairro,Audiência,2022-04,12.064504,DEMO fictício
+Panela de Bairro,Share,2022-04,33.83606,DEMO fictício
+Panela de Bairro,Audiência,2022-05,12.503867,DEMO fictício
+Panela de Bairro,Share,2022-05,35.641472,DEMO fictício
+Panela de Bairro,Audiência,2022-06,12.658319,DEMO fictício
+Panela de Bairro,Share,2022-06,35.453616,DEMO fictício
+Panela de Bairro,Audiência,2022-07,11.970395,DEMO fictício
+Panela de Bairro,Share,2022-07,36.777574,DEMO fictício
+Panela de Bairro,Audiência,2022-08,11.394793,DEMO fictício
+Panela de Bairro,Share,2022-08,34.590888,DEMO fictício
+Panela de Bairro,Audiência,2022-09,10.863902,DEMO fictício
+Panela de Bairro,Share,2022-09,34.781825,DEMO fictício
+Panela de Bairro,Audiência,2022-10,11.416861,DEMO fictício
+Panela de Bairro,Share,2022-10,33.20552,DEMO fictício
+Panela de Bairro,Audiência,2022-11,11.188854,DEMO fictício
+Panela de Bairro,Share,2022-11,33.497191,DEMO fictício
+Panela de Bairro,Audiência,2022-12,11.676021,DEMO fictício
+Panela de Bairro,Share,2022-12,33.26619,DEMO fictício
+Panela de Bairro,Audiência,2023-01,11.598092,DEMO fictício
+Panela de Bairro,Share,2023-01,32.752629,DEMO fictício
+Panela de Bairro,Audiência,2023-02,11.418495,DEMO fictício
+Panela de Bairro,Share,2023-02,34.44541,DEMO fictício
+Panela de Bairro,Audiência,2023-03,12.214381,DEMO fictício
+Panela de Bairro,Share,2023-03,34.64196,DEMO fictício
+Panela de Bairro,Audiência,2023-04,12.599343,DEMO fictício
+Panela de Bairro,Share,2023-04,34.285192,DEMO fictício
+Panela de Bairro,Audiência,2023-05,12.788495,DEMO fictício
+Panela de Bairro,Share,2023-05,33.999952,DEMO fictício
+Panela de Bairro,Audiência,2023-06,12.432932,DEMO fictício
+Panela de Bairro,Share,2023-06,35.57655,DEMO fictício
+Panela de Bairro,Audiência,2023-07,12.18458,DEMO fictício
+Panela de Bairro,Share,2023-07,35.904346,DEMO fictício
+Panela de Bairro,Audiência,2023-08,11.826536,DEMO fictício
+Panela de Bairro,Share,2023-08,34.870916,DEMO fictício
+Panela de Bairro,Audiência,2023-09,12.277584,DEMO fictício
+Panela de Bairro,Share,2023-09,34.28475,DEMO fictício
+Panela de Bairro,Audiência,2023-10,12.183513,DEMO fictício
+Panela de Bairro,Share,2023-10,33.820077,DEMO fictício
+Panela de Bairro,Audiência,2023-11,12.36809,DEMO fictício
+Panela de Bairro,Share,2023-11,34.025611,DEMO fictício
+Panela de Bairro,Audiência,2023-12,11.028878,DEMO fictício
+Panela de Bairro,Share,2023-12,32.885554,DEMO fictício
+Panela de Bairro,Audiência,2024-01,11.029028,DEMO fictício
+Panela de Bairro,Share,2024-01,32.582281,DEMO fictício
+Panela de Bairro,Audiência,2024-02,11.866004,DEMO fictício
+Panela de Bairro,Share,2024-02,33.713455,DEMO fictício
+Panela de Bairro,Audiência,2024-03,12.37499,DEMO fictício
+Panela de Bairro,Share,2024-03,33.793345,DEMO fictício
+Panela de Bairro,Audiência,2024-04,13.48563,DEMO fictício
+Panela de Bairro,Share,2024-04,35.018792,DEMO fictício
+Panela de Bairro,Audiência,2024-05,13.138845,DEMO fictício
+Panela de Bairro,Share,2024-05,35.438325,DEMO fictício
+Panela de Bairro,Audiência,2024-06,12.388317,DEMO fictício
+Panela de Bairro,Share,2024-06,35.992682,DEMO fictício
+Panela de Bairro,Audiência,2024-07,11.979463,DEMO fictício
+Panela de Bairro,Share,2024-07,35.190539,DEMO fictício
+Panela de Bairro,Audiência,2024-08,11.452797,DEMO fictício
+Panela de Bairro,Share,2024-08,36.196685,DEMO fictício
+Panela de Bairro,Audiência,2024-09,11.794624,DEMO fictício
+Panela de Bairro,Share,2024-09,35.038711,DEMO fictício
+Panela de Bairro,Audiência,2024-10,11.529553,DEMO fictício
+Panela de Bairro,Share,2024-10,34.55209,DEMO fictício
+Panela de Bairro,Audiência,2024-11,11.269129,DEMO fictício
+Panela de Bairro,Share,2024-11,33.515511,DEMO fictício
+Panela de Bairro,Audiência,2024-12,11.429845,DEMO fictício
+Panela de Bairro,Share,2024-12,32.104013,DEMO fictício
+Panela de Bairro,Audiência,2025-01,11.933794,DEMO fictício
+Panela de Bairro,Share,2025-01,33.003207,DEMO fictício
+Panela de Bairro,Audiência,2025-02,11.882684,DEMO fictício
+Panela de Bairro,Share,2025-02,34.294857,DEMO fictício
+Panela de Bairro,Audiência,2025-03,12.133717,DEMO fictício
+Panela de Bairro,Share,2025-03,33.962929,DEMO fictício
+Panela de Bairro,Audiência,2025-04,12.341602,DEMO fictício
+Panela de Bairro,Share,2025-04,35.349896,DEMO fictício
+Panela de Bairro,Audiência,2025-05,13.591563,DEMO fictício
+Panela de Bairro,Share,2025-05,35.870991,DEMO fictício
+Panela de Bairro,Audiência,2025-06,13.110934,DEMO fictício
+Panela de Bairro,Share,2025-06,36.175396,DEMO fictício
+Panela de Bairro,Audiência,2025-07,12.935499,DEMO fictício
+Panela de Bairro,Share,2025-07,35.667268,DEMO fictício
+Panela de Bairro,Audiência,2025-08,13.138477,DEMO fictício
+Panela de Bairro,Share,2025-08,36.008275,DEMO fictício
+Panela de Bairro,Audiência,2025-09,12.348895,DEMO fictício
+Panela de Bairro,Share,2025-09,35.732147,DEMO fictício
+Panela de Bairro,Audiência,2025-10,12.237778,DEMO fictício
+Panela de Bairro,Share,2025-10,34.632716,DEMO fictício
+Panela de Bairro,Audiência,2025-11,11.286615,DEMO fictício
+Panela de Bairro,Share,2025-11,33.728331,DEMO fictício
+Panela de Bairro,Audiência,2025-12,11.656964,DEMO fictício
+Panela de Bairro,Share,2025-12,34.127427,DEMO fictício
+Panela de Bairro,Audiência,2026-01,11.990888,DEMO fictício
+Panela de Bairro,Share,2026-01,34.933876,DEMO fictício
+Panela de Bairro,Audiência,2026-02,11.948652,DEMO fictício
+Panela de Bairro,Share,2026-02,34.136797,DEMO fictício
+Panela de Bairro,Audiência,2026-03,12.414018,DEMO fictício
+Panela de Bairro,Share,2026-03,35.215919,DEMO fictício
+Panela de Bairro,Audiência,2026-04,13.383211,DEMO fictício
+Panela de Bairro,Share,2026-04,37.017442,DEMO fictício
+Panela de Bairro,Audiência,2026-05,13.650113,DEMO fictício
+Panela de Bairro,Share,2026-05,36.475454,DEMO fictício
+Panela de Bairro,Audiência,2026-06,13.725928,DEMO fictício
+Panela de Bairro,Share,2026-06,37.157933,DEMO fictício
+Panela de Bairro,Audiência,2026-07,13.725177,DEMO fictício
+Panela de Bairro,Share,2026-07,36.327367,DEMO fictício
+Panela de Bairro,Audiência,2026-08,13.698579,DEMO fictício
+Panela de Bairro,Share,2026-08,35.844761,DEMO fictício
+Panela de Bairro,Audiência,2026-09,14.028922,DEMO fictício
+Panela de Bairro,Share,2026-09,36.210506,DEMO fictício
+Mosaico Baiano,Audiência,2020-01,10.306539,DEMO fictício
+Mosaico Baiano,Share,2020-01,27.445946,DEMO fictício
+Mosaico Baiano,Audiência,2020-02,10.387869,DEMO fictício
+Mosaico Baiano,Share,2020-02,27.689386,DEMO fictício
+Mosaico Baiano,Audiência,2020-03,9.423972,DEMO fictício
+Mosaico Baiano,Share,2020-03,27.475172,DEMO fictício
+Mosaico Baiano,Audiência,2020-04,10.054356,DEMO fictício
+Mosaico Baiano,Share,2020-04,28.992919,DEMO fictício
+Mosaico Baiano,Audiência,2020-05,10.490311,DEMO fictício
+Mosaico Baiano,Share,2020-05,29.086321,DEMO fictício
+Mosaico Baiano,Audiência,2020-06,10.904864,DEMO fictício
+Mosaico Baiano,Share,2020-06,28.509355,DEMO fictício
+Mosaico Baiano,Audiência,2020-07,10.836698,DEMO fictício
+Mosaico Baiano,Share,2020-07,29.297384,DEMO fictício
+Mosaico Baiano,Audiência,2020-08,11.462254,DEMO fictício
+Mosaico Baiano,Share,2020-08,28.937918,DEMO fictício
+Mosaico Baiano,Audiência,2020-09,10.448444,DEMO fictício
+Mosaico Baiano,Share,2020-09,28.451234,DEMO fictício
+Mosaico Baiano,Audiência,2020-10,10.651394,DEMO fictício
+Mosaico Baiano,Share,2020-10,28.382351,DEMO fictício
+Mosaico Baiano,Audiência,2020-11,11.567448,DEMO fictício
+Mosaico Baiano,Share,2020-11,27.975801,DEMO fictício
+Mosaico Baiano,Audiência,2020-12,10.922302,DEMO fictício
+Mosaico Baiano,Share,2020-12,26.264877,DEMO fictício
+Mosaico Baiano,Audiência,2021-01,10.946321,DEMO fictício
+Mosaico Baiano,Share,2021-01,27.391937,DEMO fictício
+Mosaico Baiano,Audiência,2021-02,10.651454,DEMO fictício
+Mosaico Baiano,Share,2021-02,27.274298,DEMO fictício
+Mosaico Baiano,Audiência,2021-03,11.54763,DEMO fictício
+Mosaico Baiano,Share,2021-03,27.872088,DEMO fictício
+Mosaico Baiano,Audiência,2021-04,11.346916,DEMO fictício
+Mosaico Baiano,Share,2021-04,28.492219,DEMO fictício
+Mosaico Baiano,Audiência,2021-05,11.898435,DEMO fictício
+Mosaico Baiano,Share,2021-05,28.905542,DEMO fictício
+Mosaico Baiano,Audiência,2021-06,12.344418,DEMO fictício
+Mosaico Baiano,Share,2021-06,28.747576,DEMO fictício
+Mosaico Baiano,Audiência,2021-07,11.721378,DEMO fictício
+Mosaico Baiano,Share,2021-07,28.810026,DEMO fictício
+Mosaico Baiano,Audiência,2021-08,11.70521,DEMO fictício
+Mosaico Baiano,Share,2021-08,29.776336,DEMO fictício
+Mosaico Baiano,Audiência,2021-09,11.747488,DEMO fictício
+Mosaico Baiano,Share,2021-09,29.069318,DEMO fictício
+Mosaico Baiano,Audiência,2021-10,11.534416,DEMO fictício
+Mosaico Baiano,Share,2021-10,28.070743,DEMO fictício
+Mosaico Baiano,Audiência,2021-11,10.972679,DEMO fictício
+Mosaico Baiano,Share,2021-11,27.971656,DEMO fictício
+Mosaico Baiano,Audiência,2021-12,11.08527,DEMO fictício
+Mosaico Baiano,Share,2021-12,27.604064,DEMO fictício
+Mosaico Baiano,Audiência,2022-01,11.29869,DEMO fictício
+Mosaico Baiano,Share,2022-01,26.938093,DEMO fictício
+Mosaico Baiano,Audiência,2022-02,10.784834,DEMO fictício
+Mosaico Baiano,Share,2022-02,26.918535,DEMO fictício
+Mosaico Baiano,Audiência,2022-03,11.307282,DEMO fictício
+Mosaico Baiano,Share,2022-03,27.551425,DEMO fictício
+Mosaico Baiano,Audiência,2022-04,11.551091,DEMO fictício
+Mosaico Baiano,Share,2022-04,26.838877,DEMO fictício
+Mosaico Baiano,Audiência,2022-05,11.926267,DEMO fictício
+Mosaico Baiano,Share,2022-05,28.239592,DEMO fictício
+Mosaico Baiano,Audiência,2022-06,11.694736,DEMO fictício
+Mosaico Baiano,Share,2022-06,28.248592,DEMO fictício
+Mosaico Baiano,Audiência,2022-07,11.660685,DEMO fictício
+Mosaico Baiano,Share,2022-07,29.434736,DEMO fictício
+Mosaico Baiano,Audiência,2022-08,11.360357,DEMO fictício
+Mosaico Baiano,Share,2022-08,29.113912,DEMO fictício
+Mosaico Baiano,Audiência,2022-09,11.218494,DEMO fictício
+Mosaico Baiano,Share,2022-09,29.08962,DEMO fictício
+Mosaico Baiano,Audiência,2022-10,10.901636,DEMO fictício
+Mosaico Baiano,Share,2022-10,28.107693,DEMO fictício
+Mosaico Baiano,Audiência,2022-11,10.661316,DEMO fictício
+Mosaico Baiano,Share,2022-11,27.993264,DEMO fictício
+Mosaico Baiano,Audiência,2022-12,10.037473,DEMO fictício
+Mosaico Baiano,Share,2022-12,27.317834,DEMO fictício
+Mosaico Baiano,Audiência,2023-01,11.123995,DEMO fictício
+Mosaico Baiano,Share,2023-01,27.134979,DEMO fictício
+Mosaico Baiano,Audiência,2023-02,10.405046,DEMO fictício
+Mosaico Baiano,Share,2023-02,27.136257,DEMO fictício
+Mosaico Baiano,Audiência,2023-03,10.85568,DEMO fictício
+Mosaico Baiano,Share,2023-03,27.942071,DEMO fictício
+Mosaico Baiano,Audiência,2023-04,11.162401,DEMO fictício
+Mosaico Baiano,Share,2023-04,27.805316,DEMO fictício
+Mosaico Baiano,Audiência,2023-05,11.890395,DEMO fictício
+Mosaico Baiano,Share,2023-05,28.868871,DEMO fictício
+Mosaico Baiano,Audiência,2023-06,12.007018,DEMO fictício
+Mosaico Baiano,Share,2023-06,29.163625,DEMO fictício
+Mosaico Baiano,Audiência,2023-07,12.465553,DEMO fictício
+Mosaico Baiano,Share,2023-07,29.213631,DEMO fictício
+Mosaico Baiano,Audiência,2023-08,12.702769,DEMO fictício
+Mosaico Baiano,Share,2023-08,29.196727,DEMO fictício
+Mosaico Baiano,Audiência,2023-09,12.351191,DEMO fictício
+Mosaico Baiano,Share,2023-09,28.540299,DEMO fictício
+Mosaico Baiano,Audiência,2023-10,11.810286,DEMO fictício
+Mosaico Baiano,Share,2023-10,28.165355,DEMO fictício
+Mosaico Baiano,Audiência,2023-11,11.426819,DEMO fictício
+Mosaico Baiano,Share,2023-11,27.403577,DEMO fictício
+Mosaico Baiano,Audiência,2023-12,11.007845,DEMO fictício
+Mosaico Baiano,Share,2023-12,27.445586,DEMO fictício
+Mosaico Baiano,Audiência,2024-01,9.600367,DEMO fictício
+Mosaico Baiano,Share,2024-01,27.946154,DEMO fictício
+Mosaico Baiano,Audiência,2024-02,10.042054,DEMO fictício
+Mosaico Baiano,Share,2024-02,28.948457,DEMO fictício
+Mosaico Baiano,Audiência,2024-03,10.780141,DEMO fictício
+Mosaico Baiano,Share,2024-03,28.996203,DEMO fictício
+Mosaico Baiano,Audiência,2024-04,10.850745,DEMO fictício
+Mosaico Baiano,Share,2024-04,29.391905,DEMO fictício
+Mosaico Baiano,Audiência,2024-05,11.927299,DEMO fictício
+Mosaico Baiano,Share,2024-05,29.254138,DEMO fictício
+Mosaico Baiano,Audiência,2024-06,12.588668,DEMO fictício
+Mosaico Baiano,Share,2024-06,30.872462,DEMO fictício
+Mosaico Baiano,Audiência,2024-07,12.451493,DEMO fictício
+Mosaico Baiano,Share,2024-07,31.617299,DEMO fictício
+Mosaico Baiano,Audiência,2024-08,12.021172,DEMO fictício
+Mosaico Baiano,Share,2024-08,30.842283,DEMO fictício
+Mosaico Baiano,Audiência,2024-09,11.610075,DEMO fictício
+Mosaico Baiano,Share,2024-09,30.09232,DEMO fictício
+Mosaico Baiano,Audiência,2024-10,11.557916,DEMO fictício
+Mosaico Baiano,Share,2024-10,29.725107,DEMO fictício
+Mosaico Baiano,Audiência,2024-11,11.689263,DEMO fictício
+Mosaico Baiano,Share,2024-11,29.312183,DEMO fictício
+Mosaico Baiano,Audiência,2024-12,11.25907,DEMO fictício
+Mosaico Baiano,Share,2024-12,29.02464,DEMO fictício
+Mosaico Baiano,Audiência,2025-01,11.73641,DEMO fictício
+Mosaico Baiano,Share,2025-01,27.992301,DEMO fictício
+Mosaico Baiano,Audiência,2025-02,11.763458,DEMO fictício
+Mosaico Baiano,Share,2025-02,28.99594,DEMO fictício
+Mosaico Baiano,Audiência,2025-03,11.627186,DEMO fictício
+Mosaico Baiano,Share,2025-03,29.25775,DEMO fictício
+Mosaico Baiano,Audiência,2025-04,11.553102,DEMO fictício
+Mosaico Baiano,Share,2025-04,29.186864,DEMO fictício
+Mosaico Baiano,Audiência,2025-05,11.416484,DEMO fictício
+Mosaico Baiano,Share,2025-05,30.28307,DEMO fictício
+Mosaico Baiano,Audiência,2025-06,12.086579,DEMO fictício
+Mosaico Baiano,Share,2025-06,30.259416,DEMO fictício
+Mosaico Baiano,Audiência,2025-07,11.648834,DEMO fictício
+Mosaico Baiano,Share,2025-07,30.736666,DEMO fictício
+Mosaico Baiano,Audiência,2025-08,12.113831,DEMO fictício
+Mosaico Baiano,Share,2025-08,30.147768,DEMO fictício
+Mosaico Baiano,Audiência,2025-09,11.910054,DEMO fictício
+Mosaico Baiano,Share,2025-09,29.203926,DEMO fictício
+Mosaico Baiano,Audiência,2025-10,11.421074,DEMO fictício
+Mosaico Baiano,Share,2025-10,29.200133,DEMO fictício
+Mosaico Baiano,Audiência,2025-11,11.224264,DEMO fictício
+Mosaico Baiano,Share,2025-11,29.504812,DEMO fictício
+Mosaico Baiano,Audiência,2025-12,11.462978,DEMO fictício
+Mosaico Baiano,Share,2025-12,29.401963,DEMO fictício
+Mosaico Baiano,Audiência,2026-01,11.506238,DEMO fictício
+Mosaico Baiano,Share,2026-01,28.925478,DEMO fictício
+Mosaico Baiano,Audiência,2026-02,11.528432,DEMO fictício
+Mosaico Baiano,Share,2026-02,29.035001,DEMO fictício
+Mosaico Baiano,Audiência,2026-03,12.20459,DEMO fictício
+Mosaico Baiano,Share,2026-03,28.547956,DEMO fictício
+Mosaico Baiano,Audiência,2026-04,12.576066,DEMO fictício
+Mosaico Baiano,Share,2026-04,29.03642,DEMO fictício
+Mosaico Baiano,Audiência,2026-05,13.072164,DEMO fictício
+Mosaico Baiano,Share,2026-05,28.499179,DEMO fictício
+Mosaico Baiano,Audiência,2026-06,13.378189,DEMO fictício
+Mosaico Baiano,Share,2026-06,30.086484,DEMO fictício
+Mosaico Baiano,Audiência,2026-07,13.003474,DEMO fictício
+Mosaico Baiano,Share,2026-07,30.592906,DEMO fictício
+Mosaico Baiano,Audiência,2026-08,12.599,DEMO fictício
+Mosaico Baiano,Share,2026-08,30.849603,DEMO fictício
+Mosaico Baiano,Audiência,2026-09,11.736222,DEMO fictício
+Mosaico Baiano,Share,2026-09,29.759137,DEMO fictício
+Bahia Rural,Audiência,2020-01,8.516172,DEMO fictício
+Bahia Rural,Share,2020-01,45.769314,DEMO fictício
+Bahia Rural,Audiência,2020-02,8.910088,DEMO fictício
+Bahia Rural,Share,2020-02,44.817193,DEMO fictício
+Bahia Rural,Audiência,2020-03,8.671073,DEMO fictício
+Bahia Rural,Share,2020-03,48.386579,DEMO fictício
+Bahia Rural,Audiência,2020-04,8.47259,DEMO fictício
+Bahia Rural,Share,2020-04,47.393986,DEMO fictício
+Bahia Rural,Audiência,2020-05,8.215285,DEMO fictício
+Bahia Rural,Share,2020-05,48.694037,DEMO fictício
+Bahia Rural,Audiência,2020-06,7.795459,DEMO fictício
+Bahia Rural,Share,2020-06,47.085267,DEMO fictício
+Bahia Rural,Audiência,2020-07,8.167749,DEMO fictício
+Bahia Rural,Share,2020-07,45.832207,DEMO fictício
+Bahia Rural,Audiência,2020-08,8.022519,DEMO fictício
+Bahia Rural,Share,2020-08,44.497518,DEMO fictício
+Bahia Rural,Audiência,2020-09,8.344339,DEMO fictício
+Bahia Rural,Share,2020-09,44.631783,DEMO fictício
+Bahia Rural,Audiência,2020-10,8.47093,DEMO fictício
+Bahia Rural,Share,2020-10,43.666096,DEMO fictício
+Bahia Rural,Audiência,2020-11,8.04828,DEMO fictício
+Bahia Rural,Share,2020-11,45.039931,DEMO fictício
+Bahia Rural,Audiência,2020-12,7.893403,DEMO fictício
+Bahia Rural,Share,2020-12,45.012213,DEMO fictício
+Bahia Rural,Audiência,2021-01,8.398703,DEMO fictício
+Bahia Rural,Share,2021-01,46.042039,DEMO fictício
+Bahia Rural,Audiência,2021-02,8.264242,DEMO fictício
+Bahia Rural,Share,2021-02,47.946715,DEMO fictício
+Bahia Rural,Audiência,2021-03,8.578359,DEMO fictício
+Bahia Rural,Share,2021-03,46.932181,DEMO fictício
+Bahia Rural,Audiência,2021-04,8.884609,DEMO fictício
+Bahia Rural,Share,2021-04,48.050411,DEMO fictício
+Bahia Rural,Audiência,2021-05,9.273999,DEMO fictício
+Bahia Rural,Share,2021-05,47.365525,DEMO fictício
+Bahia Rural,Audiência,2021-06,9.060348,DEMO fictício
+Bahia Rural,Share,2021-06,48.076119,DEMO fictício
+Bahia Rural,Audiência,2021-07,9.157974,DEMO fictício
+Bahia Rural,Share,2021-07,45.385853,DEMO fictício
+Bahia Rural,Audiência,2021-08,8.066389,DEMO fictício
+Bahia Rural,Share,2021-08,46.065916,DEMO fictício
+Bahia Rural,Audiência,2021-09,8.099008,DEMO fictício
+Bahia Rural,Share,2021-09,45.587795,DEMO fictício
+Bahia Rural,Audiência,2021-10,7.931039,DEMO fictício
+Bahia Rural,Share,2021-10,44.227386,DEMO fictício
+Bahia Rural,Audiência,2021-11,7.91278,DEMO fictício
+Bahia Rural,Share,2021-11,46.203389,DEMO fictício
+Bahia Rural,Audiência,2021-12,8.03211,DEMO fictício
+Bahia Rural,Share,2021-12,47.097421,DEMO fictício
+Bahia Rural,Audiência,2022-01,8.355312,DEMO fictício
+Bahia Rural,Share,2022-01,47.866734,DEMO fictício
+Bahia Rural,Audiência,2022-02,8.448792,DEMO fictício
+Bahia Rural,Share,2022-02,47.571736,DEMO fictício
+Bahia Rural,Audiência,2022-03,8.483721,DEMO fictício
+Bahia Rural,Share,2022-03,47.072731,DEMO fictício
+Bahia Rural,Audiência,2022-04,8.305017,DEMO fictício
+Bahia Rural,Share,2022-04,45.165637,DEMO fictício
+Bahia Rural,Audiência,2022-05,8.44228,DEMO fictício
+Bahia Rural,Share,2022-05,45.89091,DEMO fictício
+Bahia Rural,Audiência,2022-06,8.128461,DEMO fictício
+Bahia Rural,Share,2022-06,45.368637,DEMO fictício
+Bahia Rural,Audiência,2022-07,8.289786,DEMO fictício
+Bahia Rural,Share,2022-07,44.540391,DEMO fictício
+Bahia Rural,Audiência,2022-08,7.999811,DEMO fictício
+Bahia Rural,Share,2022-08,44.746671,DEMO fictício
+Bahia Rural,Audiência,2022-09,8.018175,DEMO fictício
+Bahia Rural,Share,2022-09,42.781651,DEMO fictício
+Bahia Rural,Audiência,2022-10,7.770562,DEMO fictício
+Bahia Rural,Share,2022-10,43.855592,DEMO fictício
+Bahia Rural,Audiência,2022-11,7.91607,DEMO fictício
+Bahia Rural,Share,2022-11,45.071157,DEMO fictício
+Bahia Rural,Audiência,2022-12,7.999809,DEMO fictício
+Bahia Rural,Share,2022-12,46.867423,DEMO fictício
+Bahia Rural,Audiência,2023-01,8.355255,DEMO fictício
+Bahia Rural,Share,2023-01,47.341072,DEMO fictício
+Bahia Rural,Audiência,2023-02,8.83145,DEMO fictício
+Bahia Rural,Share,2023-02,47.8747,DEMO fictício
+Bahia Rural,Audiência,2023-03,8.969524,DEMO fictício
+Bahia Rural,Share,2023-03,48.284342,DEMO fictício
+Bahia Rural,Audiência,2023-04,8.982586,DEMO fictício
+Bahia Rural,Share,2023-04,47.999671,DEMO fictício
+Bahia Rural,Audiência,2023-05,8.823755,DEMO fictício
+Bahia Rural,Share,2023-05,49.425194,DEMO fictício
+Bahia Rural,Audiência,2023-06,8.188787,DEMO fictício
+Bahia Rural,Share,2023-06,48.194065,DEMO fictício
+Bahia Rural,Audiência,2023-07,8.008216,DEMO fictício
+Bahia Rural,Share,2023-07,47.922581,DEMO fictício
+Bahia Rural,Audiência,2023-08,8.04909,DEMO fictício
+Bahia Rural,Share,2023-08,47.32448,DEMO fictício
+Bahia Rural,Audiência,2023-09,8.457753,DEMO fictício
+Bahia Rural,Share,2023-09,45.854171,DEMO fictício
+Bahia Rural,Audiência,2023-10,8.300825,DEMO fictício
+Bahia Rural,Share,2023-10,43.688693,DEMO fictício
+Bahia Rural,Audiência,2023-11,8.142671,DEMO fictício
+Bahia Rural,Share,2023-11,44.981124,DEMO fictício
+Bahia Rural,Audiência,2023-12,8.299119,DEMO fictício
+Bahia Rural,Share,2023-12,43.15683,DEMO fictício
+Bahia Rural,Audiência,2024-01,8.627751,DEMO fictício
+Bahia Rural,Share,2024-01,44.666529,DEMO fictício
+Bahia Rural,Audiência,2024-02,8.499531,DEMO fictício
+Bahia Rural,Share,2024-02,44.83797,DEMO fictício
+Bahia Rural,Audiência,2024-03,8.748933,DEMO fictício
+Bahia Rural,Share,2024-03,46.070756,DEMO fictício
+Bahia Rural,Audiência,2024-04,8.618018,DEMO fictício
+Bahia Rural,Share,2024-04,45.726539,DEMO fictício
+Bahia Rural,Audiência,2024-05,8.442116,DEMO fictício
+Bahia Rural,Share,2024-05,44.823939,DEMO fictício
+Bahia Rural,Audiência,2024-06,7.901057,DEMO fictício
+Bahia Rural,Share,2024-06,45.226124,DEMO fictício
+Bahia Rural,Audiência,2024-07,8.315657,DEMO fictício
+Bahia Rural,Share,2024-07,43.566758,DEMO fictício
+Bahia Rural,Audiência,2024-08,7.945629,DEMO fictício
+Bahia Rural,Share,2024-08,43.555104,DEMO fictício
+Bahia Rural,Audiência,2024-09,7.826754,DEMO fictício
+Bahia Rural,Share,2024-09,45.277123,DEMO fictício
+Bahia Rural,Audiência,2024-10,8.163271,DEMO fictício
+Bahia Rural,Share,2024-10,44.888001,DEMO fictício
+Bahia Rural,Audiência,2024-11,7.949956,DEMO fictício
+Bahia Rural,Share,2024-11,44.48669,DEMO fictício
+Bahia Rural,Audiência,2024-12,8.124581,DEMO fictício
+Bahia Rural,Share,2024-12,44.501562,DEMO fictício
+Bahia Rural,Audiência,2025-01,8.824409,DEMO fictício
+Bahia Rural,Share,2025-01,44.813856,DEMO fictício
+Bahia Rural,Audiência,2025-02,8.701371,DEMO fictício
+Bahia Rural,Share,2025-02,45.920036,DEMO fictício
+Bahia Rural,Audiência,2025-03,8.637903,DEMO fictício
+Bahia Rural,Share,2025-03,46.55802,DEMO fictício
+Bahia Rural,Audiência,2025-04,8.771529,DEMO fictício
+Bahia Rural,Share,2025-04,48.746322,DEMO fictício
+Bahia Rural,Audiência,2025-05,8.88384,DEMO fictício
+Bahia Rural,Share,2025-05,48.707911,DEMO fictício
+Bahia Rural,Audiência,2025-06,8.696668,DEMO fictício
+Bahia Rural,Share,2025-06,48.095658,DEMO fictício
+Bahia Rural,Audiência,2025-07,8.273493,DEMO fictício
+Bahia Rural,Share,2025-07,46.493294,DEMO fictício
+Bahia Rural,Audiência,2025-08,7.851438,DEMO fictício
+Bahia Rural,Share,2025-08,45.433809,DEMO fictício
+Bahia Rural,Audiência,2025-09,7.690072,DEMO fictício
+Bahia Rural,Share,2025-09,44.50336,DEMO fictício
+Bahia Rural,Audiência,2025-10,7.888883,DEMO fictício
+Bahia Rural,Share,2025-10,44.622916,DEMO fictício
+Bahia Rural,Audiência,2025-11,8.012369,DEMO fictício
+Bahia Rural,Share,2025-11,44.53553,DEMO fictício
+Bahia Rural,Audiência,2025-12,8.221743,DEMO fictício
+Bahia Rural,Share,2025-12,46.533891,DEMO fictício
+Bahia Rural,Audiência,2026-01,8.443697,DEMO fictício
+Bahia Rural,Share,2026-01,47.346161,DEMO fictício
+Bahia Rural,Audiência,2026-02,8.246287,DEMO fictício
+Bahia Rural,Share,2026-02,45.958083,DEMO fictício
+Bahia Rural,Audiência,2026-03,8.344672,DEMO fictício
+Bahia Rural,Share,2026-03,45.771837,DEMO fictício
+Bahia Rural,Audiência,2026-04,8.057122,DEMO fictício
+Bahia Rural,Share,2026-04,45.824427,DEMO fictício
+Bahia Rural,Audiência,2026-05,7.640098,DEMO fictício
+Bahia Rural,Share,2026-05,45.675092,DEMO fictício
+Bahia Rural,Audiência,2026-06,8.768375,DEMO fictício
+Bahia Rural,Share,2026-06,47.019721,DEMO fictício
+Bahia Rural,Audiência,2026-07,8.434052,DEMO fictício
+Bahia Rural,Share,2026-07,46.163811,DEMO fictício
+Bahia Rural,Audiência,2026-08,8.089695,DEMO fictício
+Bahia Rural,Share,2026-08,44.502916,DEMO fictício
+Bahia Rural,Audiência,2026-09,7.987136,DEMO fictício
+Bahia Rural,Share,2026-09,44.364826,DEMO fictício
