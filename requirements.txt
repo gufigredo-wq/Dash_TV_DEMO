@@ -1,4 +1,5 @@
 # versões fixas, as mesmas testadas no desenvolvimento (Python 3.12)
+# demonstração: sem as bibliotecas de banco de dados (não são usadas com dados fictícios)
 streamlit==1.65.0
 plotly==7.1.0
 pandas==3.0.2
@@ -6,7 +7,3 @@ numpy==2.4.4
 openpyxl==3.1.5
 matplotlib==3.10.8
 requests==2.33.1
-# banco de dados (opcional: só é usado quando há [banco] url nos Secrets ou PAINEL_DB_URL)
-sqlalchemy==2.0.36
-psycopg[binary]==3.2.3
-# SQL Server: troque a linha acima por  pyodbc==5.2.0  (e instale o "ODBC Driver 18 for SQL Server" no servidor)
