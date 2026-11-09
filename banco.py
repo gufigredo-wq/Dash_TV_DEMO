@@ -1,12 +1,10 @@
 """Acesso ao banco de dados da empresa (opcional).
 
-Quando há uma conexão configurada, os painéis leem a audiência, o demográfico, as rodadas de projeção e os parâmetros
-do banco, carregados pela aplicação de carga da TI. Sem conexão, continuam lendo os arquivos do repositório (dados/).
+Os painéis leem a audiência, o demográfico, as rodadas de projeção e os parâmetros do banco, carregados pela aplicação
+de carga da TI. Sem conexão (ou se ela falhar), o painel mostra "Não disponível": não há volta para arquivos locais.
 
-Configuração (uma das duas):
-    Secrets/arquivo .streamlit/secrets.toml:   [banco]
-                                               url = "postgresql+psycopg://usuario:senha@servidor:5432/audiencia"
-    Variável de ambiente:                      PAINEL_DB_URL=postgresql+psycopg://...
+Configuração: só a variável de ambiente PAINEL_DB_URL (no Labs, definida pela TI), no formato do SQLAlchemy:
+    PAINEL_DB_URL=postgresql+psycopg://usuario:senha@servidor:5432/audiencia
 
 Qualquer banco aceito pelo SQLAlchemy funciona (PostgreSQL, SQL Server, MySQL, Oracle), com o driver correspondente
 instalado (ex.: SQL Server: mssql+pyodbc://... com o ODBC Driver 18). As tabelas estão em TABELAS e em ESQUEMA_BANCO.md.
@@ -55,15 +53,8 @@ TABELAS = {
 
 
 def url():
-    """Endereço do banco: [banco] url nos Secrets ou a variável PAINEL_DB_URL. None = modo arquivos."""
-    try:
-        import streamlit as st
-        u = st.secrets.get("banco", {}).get("url")
-        if u:
-            return str(u)
-    except Exception:
-        pass
-    return os.environ.get("PAINEL_DB_URL") or None
+    """Endereço do banco: só a variável de ambiente PAINEL_DB_URL (definida pelo Labs). None = sem banco."""
+    return (os.environ.get("PAINEL_DB_URL") or "").strip() or None
 
 
 def ativo():
@@ -150,11 +141,14 @@ def excluir(tabela, **chave):
 
 
 # ------------------------------------------------------------------------------------------------ atalhos dos painéis
-def parametros(painel):
-    """Parâmetros do painel ('radio' ou 'tv') como dicionário {chave: valor}."""
+def parametros(painel, estrito=False):
+    """Parâmetros do painel ('radio' ou 'tv') como dicionário {chave: valor}. Com estrito=True, uma falha de leitura
+    sobe como erro (o painel mostra "Não disponível") em vez de devolver vazio."""
     try:
         d = ler("painel_parametros")
     except Exception:
+        if estrito:
+            raise
         return {}
     d = d[d["painel"] == painel]
     out = {}
