@@ -845,24 +845,10 @@ def faixa_atual():
     return st.session_state.get("faixa_ref") or tv.FAIXA
 
 
-def _troca_faixa():
-    """Ao trocar a faixa de referência, a Visão geral troca a outra faixa pela escolhida na seleção de programas."""
-    nova = st.session_state.get("faixa_ref") or tv.FAIXA
-    outra = [f for f in diario.FAIXAS if f != nova]
-    sel = st.session_state.get("p1_progs")
-    if sel:
-        novo = []
-        for p in sel:
-            p = nova if p in outra else p
-            if p not in novo:
-                novo.append(p)
-        st.session_state["p1_progs"] = novo
-
-
 _fx = st.columns([1.6, 5])
-_fx[0].segmented_control("Faixa horária de referência", diario.FAIXAS, default=tv.FAIXA, key="faixa_ref", on_change=_troca_faixa,
-                         help="Separa as duas faixas: a Visão geral passa a mostrar a faixa escolhida e as Projeções mostram o "
-                              "modelo diário dessa faixa. Os programas não mudam.")
+_fx[0].segmented_control("Faixa horária de referência", diario.FAIXAS, default=tv.FAIXA, key="faixa_ref",
+                         help="O único lugar onde se escolhe a faixa: a Visão geral mostra a faixa escolhida junto com os "
+                              "programas, e as Projeções mostram o modelo diário dessa faixa.")
 _fx[1].markdown(f'<div class="vs" style="margin-top:30px">Faixa em uso: <b>{st.session_state.get("faixa_ref") or tv.FAIXA}</b> · '
                 f'TV Bahia (Globo) · Grande Salvador</div>', unsafe_allow_html=True)
 paginas = st.tabs(["Visão geral", "Projeções e metas"])
@@ -1002,7 +988,7 @@ def arrastar_selecionados(chave, txt):
 
 
 # =================================================================================== VISÃO GERAL · DESEMPENHO
-PADRAO_P1 = [tv.FAIXA, "BATV", "Globo Esporte", "Bahia Meio Dia"]
+PADRAO_P1 = ["BATV", "Globo Esporte", "Bahia Meio Dia"]          # programas; a faixa vem do seletor acima das abas
 
 
 def _peso(prog, mes):
@@ -1373,17 +1359,21 @@ def pagina_desempenho():
     if BASE.empty:
         st.warning("A base mensal está vazia: falta o arquivo dados/tv_mensal.csv no repositório.")
         return
-    progs = [p for p in tv.PROGRAMAS if p in set(BASE["programa"])]
+    # a faixa (6h ou 7h às 24h) é escolhida só no seletor acima das abas e entra sempre nos gráficos; aqui, só os programas
+    faixa = faixa_atual()
+    progs = [p for p in tv.PROGRAMAS if p in set(BASE["programa"]) and p not in diario.FAIXAS]
     f = st.columns([3.6, 1.2, 1.0, 2.2])
     ordem_do_arraste("p1_progs", "p1_ordem_txt", progs, nome_p)
     if "p1_progs" not in st.session_state:
-        fx = st.session_state.get("faixa_ref") or tv.FAIXA
-        st.session_state["p1_progs"] = [fx if p == tv.FAIXA else p for p in PADRAO_P1 if p in progs or p == tv.FAIXA]
+        st.session_state["p1_progs"] = [p for p in PADRAO_P1 if p in progs]
+    elif any(p not in progs for p in st.session_state["p1_progs"]):
         st.session_state["p1_progs"] = [p for p in st.session_state["p1_progs"] if p in progs]
     with f[0]:
-        sel = st.multiselect("Faixa e programas", progs, key="p1_progs", format_func=nome_p, placeholder="Escolha os programas",
-                             help="Arraste os quadros para mudar a ordem nos gráficos") or [p for p in PADRAO_P1 if p in progs]
+        sel_progs = st.multiselect("Programas", progs, key="p1_progs", format_func=nome_p, placeholder="Escolha os programas",
+                                   help=f"A faixa ({nome_p(faixa)}) vem do seletor \"Faixa horária de referência\", acima das abas, "
+                                        "e aparece sempre nos gráficos. Arraste os quadros para mudar a ordem dos programas.")
         arrastar_selecionados("p1_progs", "p1_ordem_txt")
+    sel = ([faixa] if faixa in set(BASE["programa"]) else []) + list(sel_progs)
     met = f[1].selectbox("Métrica", tv.METRICAS, key="p1_met", format_func=lambda m: f"{m} ({tv.SIGLA[m]})")
     serie_ = f[2].selectbox("Série", ["Mês", "Trimestre", "Ano"], key="p1_serie",
                             help="Trimestre e ano = média dos meses ponderada pelo número de exibições (como o acumulado oficial).")
@@ -1395,7 +1385,8 @@ def pagina_desempenho():
     p0, p1 = f[3].select_slider("Período", options=pers, value=(pers[max(0, len(pers) - n_pad)], pers[-1]),
                                 format_func=lambda x: _rot_per(x, serie_), key=f"p1_per_{serie_}")
     periodos = [x for x in pers if p0 <= x <= p1]
-    st.session_state["_filtros_txt"] = (f"Faixa e programas: {', '.join(nome_p(p) for p in sel)} · Métrica: {met.lower()} · "
+    st.session_state["_filtros_txt"] = (f"Faixa: {nome_p(faixa)} · Programas: {', '.join(nome_p(p) for p in sel_progs) or 'nenhum'} · "
+                                        f"Métrica: {met.lower()} · "
                                         f"Série: {serie_.lower()} · Período: {_rot_per(p0, serie_)} a {_rot_per(p1, serie_)}")
 
     # ---- KPIs: último mês e média do ano (parcial) de cada programa selecionado
@@ -1967,7 +1958,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "04/11/2026 · Labs · projeções pelo modelo diário"
+VERSAO_PAINEL = "09/11/2026 · Labs · faixa escolhida num só lugar"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
