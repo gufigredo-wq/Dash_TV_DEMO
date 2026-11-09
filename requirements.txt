@@ -1,9 +1,7 @@
 # versões fixas, as mesmas testadas no desenvolvimento (Python 3.12)
-# demonstração: sem as bibliotecas de banco de dados (não são usadas com dados fictícios)
 streamlit==1.65.0
 plotly==7.1.0
 pandas==3.0.2
 numpy==2.4.4
 openpyxl==3.1.5
 matplotlib==3.10.8
-requests==2.33.1
