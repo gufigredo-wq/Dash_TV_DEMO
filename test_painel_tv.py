@@ -107,9 +107,13 @@ def test_faixas_e_modelo_diario(app_banco):
     assert "Faixa: TV Bahia (7h às 24h)" in at.session_state["_filtros_txt"]
     assert "6h às 24h" not in at.session_state["_filtros_txt"]
     assert any(g["chave"] == "v_rd_ano_7h às 24h" for g in at.session_state["_graf"])
-    # a aba de Projeções mostra só o modelo diário das faixas (nada do modelo mensal por programa)
-    proj = [g["chave"] for g in at.session_state["_graf"] if g["aba"] == "Projeções e metas"]
-    assert proj and all(k.startswith("v_rd_") for k in proj), proj
+    # Projeções: a faixa vem do modelo diário; os programas, do modelo mensal (sem a faixa, para não aparecer duas vezes)
+    proj = [g for g in at.session_state["_graf"] if g["aba"] == "Projeções e metas"]
+    assert any(g["chave"].startswith("v_rd_") for g in proj)
+    mensal = [g for g in proj if not g["chave"].startswith("v_rd_")]
+    assert mensal, "faltam as metas e projeções por programa"
+    for g in mensal:
+        assert "às 24h" not in g["fig"].to_json(), g["chave"]
 
 
 def test_pdf(app_banco):
