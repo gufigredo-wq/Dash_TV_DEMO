@@ -23,6 +23,131 @@ import tv  # noqa: E402
 import diario  # noqa: E402
 import banco  # noqa: E402  (banco de dados da empresa, opcional: sem conexão configurada, lê os arquivos de dados/)
 
+
+# ============================================================ modo de demonstração
+def _modo_demo():
+    """Demonstração com dados fictícios quando: Secrets tem modo = "demo", a variável PAINEL_MODO=demo está definida,
+    ou existe o arquivo MODO_DEMO na pasta do app. O mesmo código serve ao painel real e à demonstração."""
+    try:
+        if str(st.secrets.get("modo", "")).lower() == "demo":
+            return True
+    except Exception:
+        pass
+    return os.environ.get("PAINEL_MODO", "").lower() == "demo" or os.path.exists("MODO_DEMO")
+
+
+MODO_DEMO = _modo_demo()
+if MODO_DEMO:
+    # os dados fictícios são gerados na hora numa pasta própria (fora do Git) e o painel passa a trabalhar nela:
+    # nada de dado real é lido, nada é gravado no banco nem no GitHub
+    _pasta_demo = os.path.join(os.getcwd(), "demo_runtime")
+    if not os.path.exists(os.path.join(_pasta_demo, "dados", "rodadas_diarias")):
+        import demo_dados
+        demo_dados.gera(_pasta_demo)
+    os.chdir(_pasta_demo)
+
+
+def _banco_ativo():
+    """Banco de dados em uso: conexão configurada e fora do modo demonstração."""
+    return banco.ativo() and not MODO_DEMO
+
+
+# ============================================================ login corporativo, permissão e auditoria (biblioteca labs_streamlit da TI)
+from labs_streamlit import Usuario, auditar, obter_usuario, pode_fazer  # noqa: E402
+
+# permissão que libera as gravações, como vem no cabeçalho X-Forwarded-Modulos do gateway (padrão do Labs: "atualizar");
+# quem não a tem só consulta
+MODULO_PERMISSAO = "atualizar"
+
+
+# só na demonstração: perfis simulados para testar o login e as permissões sem o gateway do Labs
+PERFIS_DEMO = {
+    "Pode atualizar": Usuario(email="ana.pesquisa@redebahia.com.br", nome="Ana Pesquisa (simulação)", id="demo-1",
+                              modulos=frozenset({"acesso", "atualizar"})),
+    "Só consulta": Usuario(email="joao.jornalismo@redebahia.com.br", nome="João Jornalismo (simulação)", id="demo-2",
+                           modulos=frozenset({"acesso"})),
+    "Sem login": None,
+}
+
+
+def usuario_atual():
+    if MODO_DEMO:
+        return PERFIS_DEMO.get(st.session_state.get("perfil_demo") or "Pode atualizar")
+    """Usuário autenticado pelo gateway corporativo (cabeçalhos X-Forwarded-*). Fora do Labs, LABS_DEV_USER_EMAIL."""
+    try:
+        cab = dict(st.context.headers)
+    except Exception:
+        cab = {}
+    u = obter_usuario(cab)
+    if u is not None:          # cabeçalhos HTTP chegam como Latin-1: "JoÃ£o" (UTF-8 lido errado) volta a ser "João"
+        import dataclasses
+        u = dataclasses.replace(u, nome=_texto_utf8(u.nome), email=_texto_utf8(u.email))
+    return u
+
+
+def _texto_utf8(t):
+    try:
+        return t.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError, AttributeError):
+        return t
+
+
+def pode_gravar():
+    """Só grava quem tem a permissão "atualizar" (ou '*'). Na demonstração, vale o perfil simulado escolhido na tela."""
+    return pode_fazer(usuario_atual(), MODULO_PERMISSAO)
+
+
+def registra(acao, resultado="sucesso", **kw):
+    """Registra a gravação no journal de auditoria do Labs (fora do Labs, sem AUDIT_APP, não faz nada)."""
+    if MODO_DEMO:
+        return None
+    try:
+        return auditar(acao, usuario_atual(), resultado=resultado, modulo=MODULO_PERMISSAO, **kw)
+    except Exception:
+        return None
+
+
+def _sem_permissao(acao):
+    registra(acao, resultado="negado", recurso_tipo="painel", erro_codigo="sem_permissao_atualizar")
+    st.session_state["msg_erro"] = "Seu perfil permite apenas consulta."
+
+_PROFUNDIDADE = {"n": 0}
+
+
+def protegido(acao, recurso_tipo, detalhe=None):
+    """Envolve uma função que grava: confere a permissão antes e registra a gravação na auditoria depois
+    (uma vez só, mesmo quando uma gravação chama outra). `detalhe(*a, **k)` pode devolver outra ação/recurso
+    conforme o que está sendo gravado (ex.: rodada.upload com o nome do arquivo)."""
+    def deco(func):
+        def envolta(*a, **k):
+            info = dict(acao=acao, recurso_tipo=recurso_tipo, recurso_id=None, recurso_rotulo=None)
+            if detalhe:
+                try:
+                    info.update(detalhe(*a, **k) or {})
+                except Exception:
+                    pass
+            if _PROFUNDIDADE["n"] == 0 and not pode_gravar():
+                _sem_permissao(info["acao"])
+                return None
+            _PROFUNDIDADE["n"] += 1
+            try:
+                saida = func(*a, **k)
+            except Exception as ex:
+                if _PROFUNDIDADE["n"] == 1:
+                    registra(info["acao"], resultado="erro", recurso_tipo=info["recurso_tipo"], recurso_id=info["recurso_id"],
+                             erro_codigo=ex.__class__.__name__)
+                raise
+            finally:
+                _PROFUNDIDADE["n"] -= 1
+            if _PROFUNDIDADE["n"] == 0:
+                rot = info["recurso_rotulo"] or next((str(x) for x in list(a) + list(k.values()) if isinstance(x, str)), None)
+                registra(info["acao"], recurso_tipo=info["recurso_tipo"], recurso_id=info["recurso_id"], recurso_rotulo=rot)
+            return saida
+        envolta.__name__ = func.__name__
+        envolta.__doc__ = func.__doc__
+        return envolta
+    return deco
+
 st.set_page_config(page_title="Painel de Audiência · TV", page_icon="📺", layout="wide", initial_sidebar_state="collapsed")
 
 # ============================================================ identidade visual (a mesma do painel de rádio)
@@ -72,7 +197,6 @@ def _vivo(hexcor):
     l = min(max(l, .58), .72) if not (.42 <= h <= .53) else min(max(l, .46), .6)   # verde-água/ciano: menos claro
     s = max(s, min(.88, s * 1.2 + .05)) if s > .08 else s
     return "#%02x%02x%02x" % tuple(round(x * 255) for x in colorsys.hls_to_rgb(h, l, s))
-
 
 
 if ESCURO:      # no fundo escuro, todas as séries ficam mais vivas
@@ -419,105 +543,75 @@ PASTA_RODADAS = os.path.join("dados", "rodadas")
 PASTA_RODADAS_BANCO = "cache_rodadas"          # cópia local das rodadas guardadas no banco (o leitor trabalha com arquivos)
 
 
-def rodadas_disponiveis():
-    """Planilhas de resultado em dados/rodadas/ e também soltas em dados/ (rodada_*.xlsx ou resultado_*.xlsx)."""
-    if banco.ativo():
-        arqs = banco.rodadas_para_pasta(PASTA_RODADAS_BANCO)
-    else:
-        arqs = glob.glob(os.path.join(PASTA_RODADAS, "*.xlsx"))
-        arqs += [a for a in glob.glob(os.path.join("dados", "*.xlsx"))
-                 if os.path.basename(a).lower().startswith(("rodada", "resultado"))]
-    return sorted({a for a in arqs if not os.path.basename(a).startswith("~$") and "diario" not in os.path.basename(a).lower()},
-                  reverse=True)
-
-
-def caminho_rodada(nome):
-    return next((a for a in rodadas_disponiveis() if os.path.basename(a) == nome), os.path.join(PASTA_RODADAS, nome))
-
-
 def _assinatura():
-    if banco.ativo():
-        return ("banco",) + banco.assinatura(["tv_audiencia_mensal", "tv_rodadas", "painel_parametros"])
-    arqs = [ARQ_BASE, ARQ_PAR, "tv.py"] + rodadas_disponiveis()
+    if _banco_ativo():
+        return ("banco",) + banco.assinatura(["tv_audiencia_mensal", "painel_parametros"])
+    arqs = [ARQ_BASE, ARQ_PAR, "tv.py"]
     return tuple(sorted((a, os.path.getmtime(a), os.path.getsize(a)) for a in arqs if os.path.exists(a)))
 
 
 @st.cache_data
 def carregar(assinatura=None):
-    par = json.load(open(ARQ_PAR, encoding="utf-8")) if os.path.exists(ARQ_PAR) else {}
-    if banco.ativo():
+    if _banco_ativo():
+        par = banco.parametros("tv", estrito=True)
         # banco de dados da empresa: a aplicação de carga da TI grava a audiência; rodadas e parâmetros podem vir do painel
         base = banco.ler("tv_audiencia_mensal").reindex(columns=tv.COLUNAS)
         base["mes"] = pd.to_datetime(base["mes"])
         base["valor"] = pd.to_numeric(base["valor"], errors="coerce")
-        par.update(banco.parametros("tv"))
-    else:
+    else:                                   # só na demonstração: arquivos fictícios gerados em demo_runtime/
+        par = json.load(open(ARQ_PAR, encoding="utf-8")) if os.path.exists(ARQ_PAR) else {}
         base = tv.ler_base(ARQ_BASE) if os.path.exists(ARQ_BASE) else pd.DataFrame(columns=tv.COLUNAS)
-    rods = {}
-    for a in rodadas_disponiveis():
-        try:
-            rods[os.path.basename(a)] = tv.ler_resultado(a)
-        except Exception as ex:          # uma rodada com problema não derruba o painel
-            rods[os.path.basename(a)] = {"erro": str(ex)}
-    return base, par, rods
+    return base, par
 
 
-BASE, PAR, RODADAS = carregar(_assinatura())
-_validas = {k: v for k, v in RODADAS.items() if "erro" not in v}
-_ord = sorted(_validas, key=lambda k: _validas[k]["meta"]["corte"] or pd.Timestamp(0), reverse=True)
-ATIVA = PAR.get("rodada_ativa") if PAR.get("rodada_ativa") in _validas else (_ord[0] if _ord else None)
-R = _validas.get(ATIVA)
-META = R["meta"] if R else {}
-ANO = META.get("ano", pd.Timestamp.today().year)
-CORTE = META.get("corte")
-REST = META.get("meses_rest", "")
-ANT = META.get("anterior", "rodada anterior")
+def _nao_disponivel(motivo):
+    """Sem banco de dados: o painel avisa e para. Nunca volta para arquivos locais (a pasta dados/ não vai ao repositório)."""
+    st.error("**Não disponível.** Os dados do painel não puderam ser carregados do banco de dados. "
+             "Tente novamente em alguns minutos; se continuar, avise a TI.")
+    st.caption(f"Detalhe técnico: {motivo}")
+    st.stop()
 
 
-def segredo(chave, padrao=None):
+if not MODO_DEMO and not banco.ativo():
+    _nao_disponivel("conexão com o banco não configurada (variável PAINEL_DB_URL)")
+try:
+    BASE, PAR = carregar(_assinatura())
+except Exception as _ex:
+    if MODO_DEMO:
+        raise
+    _nao_disponivel(f"falha ao ler o banco ({_ex.__class__.__name__})")
+_mes_max = pd.to_datetime(BASE["mes"]).max() if len(BASE) else None
+ANO = int(_mes_max.year) if _mes_max is not None and pd.notna(_mes_max) else pd.Timestamp.today().year
+
+
+# =================================================================================== MODELO DIÁRIO (por faixa)
+PASTA_DIARIAS = os.path.join("dados", "rodadas_diarias")
+
+
+def arquivos_rodadas_diarias():
+    if _banco_ativo():
+        return [a for a in banco.rodadas_para_pasta(PASTA_RODADAS_BANCO) if "diario" in os.path.basename(a).lower()]
+    return diario.arquivos_diarios([PASTA_DIARIAS, "dados"])
+
+
+@st.cache_data(show_spinner=False)
+def carregar_diarias(assinatura=None):
+    return diario.carregar_rodadas(arquivos_rodadas_diarias())
+
+
+def _assinatura_diarias():
+    if _banco_ativo():
+        return ("banco",) + banco.assinatura(["tv_rodadas"])
+    return tuple(sorted((a, os.path.getmtime(a), os.path.getsize(a)) for a in arquivos_rodadas_diarias()))
+
+
+def _corte_diario(faixa):
+    """Data de corte da rodada mais recente do modelo diário da faixa (None se não houver)."""
     try:
-        return st.secrets.get(chave, padrao)
+        lista = carregar_diarias(_assinatura_diarias())[0].get(faixa, [])
     except Exception:
-        return padrao
-
-
-def github_salvar(caminho, conteudo, msg):
-    """Grava um arquivo no repositório do GitHub. Precisa de [github] token/repo/branch em Settings → Secrets."""
-    cfg = segredo("github")
-    if not cfg or not cfg.get("token") or not cfg.get("repo"):
         return None
-    import base64
-    import requests
-    url = f"https://api.github.com/repos/{cfg['repo']}/contents/{caminho}"
-    h = {"Authorization": f"Bearer {cfg['token']}", "Accept": "application/vnd.github+json"}
-    ramo = cfg.get("branch", "main")
-    try:
-        r = requests.get(url, headers=h, params={"ref": ramo}, timeout=20)
-        corpo = {"message": msg, "content": base64.b64encode(conteudo).decode(), "branch": ramo}
-        if r.status_code == 200:
-            corpo["sha"] = r.json()["sha"]
-        r = requests.put(url, headers=h, json=corpo, timeout=30)
-        return r.status_code in (200, 201)
-    except Exception:
-        return False
-
-
-def github_apagar(caminho, msg):
-    cfg = segredo("github")
-    if not cfg or not cfg.get("token") or not cfg.get("repo"):
-        return None
-    import requests
-    url = f"https://api.github.com/repos/{cfg['repo']}/contents/{caminho}"
-    h = {"Authorization": f"Bearer {cfg['token']}", "Accept": "application/vnd.github+json"}
-    ramo = cfg.get("branch", "main")
-    try:
-        r = requests.get(url, headers=h, params={"ref": ramo}, timeout=20)
-        if r.status_code != 200:
-            return True
-        r = requests.delete(url, headers=h, json={"message": msg, "sha": r.json()["sha"], "branch": ramo}, timeout=30)
-        return r.status_code == 200
-    except Exception:
-        return False
+    return lista[0]["corte"] if lista else None
 
 
 # ============================================================ formatação e componentes
@@ -683,36 +777,18 @@ def serie(prog, met):
     return tv.serie(BASE, prog, met)
 
 
-def linha(prog, met):
-    """Linha da rodada ativa para a série (programa, métrica)."""
-    try:
-        return R["fech"].loc[(prog, met)]
-    except (KeyError, TypeError):
-        return None
-
-
-def mensal_proj(prog, met):
-    if not R:
-        return pd.DataFrame()
-    m = R["mensal"]
-    return m[(m["programa"] == prog) & (m["metrica"] == met)].set_index("mes").sort_index()
-
-
-def metas_bi(prog, met):
-    d = PAR.get("metas_mensais_bi", {}).get(f"{prog}|{met}", {})
-    return pd.Series({pd.Timestamp(k + "-01"): v for k, v in d.items()}, dtype=float).sort_index()
-
-
 # ============================================================ cabeçalho
 _ult_mes = BASE["mes"].max() if len(BASE) else None
 with st.container(key="topo"):
+    _fx_cab = st.session_state.get("faixa_ref") or tv.FAIXA
+    _corte_cab = _corte_diario(_fx_cab)
     _c = st.columns([5.6, 2.5, 1.15, 1.15], vertical_alignment="center", gap="small")
     _c[0].markdown(f"""<div class="marca"><img class="logo" alt="Rede Bahia" src="data:image/png;base64,{LOGO_B64}">
 <div class="sep"></div><div><h1>Painel de Audiência · TV</h1>
 <div class="sub">Globo · TV Bahia · Faixa 6h às 24h e programas locais · TT Domicílios · Grande Salvador · Kantar IBOPE (Instar)</div></div></div>""",
                    unsafe_allow_html=True)
     _c[1].markdown(f"""<div class="meta"><span class="vivo"></span>Dados mensais até <b>{rot_mes(_ult_mes) if _ult_mes is not None else '–'}</b><br>
-Projeção: <b>{f"rodada com dados até {CORTE:%d/%m/%Y}" if CORTE is not None else "nenhuma rodada carregada"}</b></div>""",
+Projeção ({_fx_cab}): <b>{f"dados até {_corte_cab:%d/%m/%Y}" if _corte_cab is not None else "nenhuma rodada"}</b></div>""",
                    unsafe_allow_html=True)
     _c[2].button("📄 Exportar PDF", key="pdf_btn", on_click=lambda: st.session_state.update(_abrir_pdf=True))
     _c[3].button("☀️ Modo claro" if ESCURO else "🌙 Modo escuro", key="tema_btn", on_click=_troca_tema)
@@ -821,132 +897,6 @@ def _registra_kpis(lista):
                                               "cartoes": [(_sem_tags(t), _sem_tags(v), _sem_tags(d), c) for t, v, d, c in lista]})
 
 
-def pagina_visao():
-    if not R:
-        st.warning("Nenhuma rodada de projeção carregada. Envie a planilha de resultado do notebook em ⚙ Atualizar dados (no rodapé).")
-        return
-    F = R["fech"]
-    vs = R.get("vs")
-    secao(2, "Panorama das metas · programas (modelo mensal)", f"rodada com dados até {CORTE:%d/%m/%Y} · comparação com a rodada de {ANT}")
-    lista, cards = [], ""
-    for met in tv.METRICAS:
-        r = linha(tv.FAIXA, met)
-        if r is None:
-            continue
-        sem = tv.semaforo(r["p100"])
-        era, dlt = "", ""
-        if vs is not None and (tv.FAIXA, met) in vs.index:
-            era = f" · era {tv.fmt_p(vs.loc[(tv.FAIXA, met), 'p_ant'])} em {ANT}"
-            dlt = dpp(vs.loc[(tv.FAIXA, met), "dp"])
-        lista += [(f"6h às 24h · {met} · fechamento", br(r["fech"]),
-                   f"faixa 95%: {br(r['ic_inf'])}–{br(r['ic_sup'])} · meta 100% = {br(r['meta100'])}", COR_MET[met]),
-                  (f"Chance da meta 100% · {met}", tv.fmt_p(r["p100"]), f"{sem_html(sem)}{era}", COR_SEM[sem])]
-        pct = max(0.0, min(100.0, float(r["p100"]) * 100))
-        cards += (f'<div class="gcard" style="--c:{COR_SEM[sem]}"><div class="anel" style="--p:{pct:.1f}"><div class="meio">'
-                  f'<div><div class="gv">{tv.fmt_p(r["p100"])}</div><div class="gl">chance da<br>meta 100%</div></div></div></div>'
-                  f'<div class="gtxt"><div class="gk">{nome_p(tv.FAIXA)} · {met}</div>'
-                  f'<div class="gf">fecha em <b>{br(r["fech"])}</b> <span style="color:{CINZA}; font-size:.78rem">'
-                  f'({br(r["ic_inf"])}–{br(r["ic_sup"])})</span></div>'
-                  f'<div>meta 100%: <b>{br(r["meta100"])}</b> · precisa de <b>{br(r["nec100"])}</b> em {REST}</div>'
-                  f'<div style="margin-top:6px"><span class="chip">{sem}</span>{(dlt + " vs " + ANT) if dlt else ""}</div></div></div>')
-    progs = F.drop(index=tv.FAIXA, level=0, errors="ignore")
-    grupos = {s_: [ix for ix, p in progs["p100"].items() if tv.semaforo(p) == s_] for s_ in COR_SEM if s_ != "–"}
-    rot = {"Provável": "prováveis (≥ 80%)", "Indefinido": "indefinidas (20–80%)", "Improvável": "improváveis (< 20%)"}
-    for s_, ixs in grupos.items():
-        lista.append((f"Programas · {rot[s_]}", str(len(ixs)), f"de {len(progs)} metas 100% (audiência e share)", COR_SEM[s_]))
-    n_tot = max(1, len(progs))
-    seg = "".join(f'<i style="width:{len(ixs) / n_tot * 100:.1f}%; background:{COR_SEM[s_]}"></i>' for s_, ixs in grupos.items())
-    nums = "".join(f'<div><b style="color:{COR_SEM[s_]}">{len(ixs)}</b>{rot[s_]}</div>' for s_, ixs in grupos.items())
-    lst = (f'<div class="lst"><span style="color:{COR_SEM["Provável"]}">Prováveis:</span> {_lista(_agrupa(grupos["Provável"]))}<br>'
-           f'<span style="color:{COR_SEM["Indefinido"]}">Em aberto:</span> {_lista(_agrupa(grupos["Indefinido"]))}<br>'
-           f'<span style="color:{COR_SEM["Improvável"]}">Improváveis:</span> {_lista(_agrupa(grupos["Improvável"]))}</div>')
-    cards += (f'<div class="gcard resumo" style="--c:{AZUL}; display:block"><div class="gtxt"><div class="gk">Programas · '
-              f'{len(progs)} metas 100% (audiência e share)</div><div class="seg">{seg}</div><div class="gnum">{nums}</div>{lst}'
-              f'</div></div>')
-    _registra_kpis(lista)
-    st.markdown(f'<div class="hero">{cards}</div>', unsafe_allow_html=True)
-
-    # ---- painel da meta 100%
-    with cartao("Painel da meta 100%", f"chance de fechar {ANO} na meta 100% · barra = fechamento projetado em % da meta · "
-                                       f"variação vs rodada de {ANT}"):
-        blocos = ""
-        for prog in [p for p in tv.PROGRAMAS if p in F.index.get_level_values(0)]:
-            cel = ""
-            for met in tv.METRICAS:
-                if (prog, met) not in F.index:
-                    continue
-                p = F.loc[(prog, met), "p100"]
-                s = tv.semaforo(p)
-                d = dpp(vs.loc[(prog, met), "dp"]) if vs is not None and (prog, met) in vs.index else ""
-                pm = F.loc[(prog, met), "fech"] / F.loc[(prog, met), "meta100"] * 100
-                cel += (f'<div class="c" style="background:{COR_SEM[s]}" title="fecha em {br(F.loc[(prog, met), "fech"])} · '
-                        f'meta {br(F.loc[(prog, met), "meta100"])}"><div class="m">{met}</div>'
-                        f'<div class="p">{tv.fmt_p(p)}</div><div class="bar"><i style="width:{min(pm, 115) / 1.15:.0f}%"></i></div>'
-                        f'<div class="x">{br(pm, 1)}% da meta{" · " + d if d else ""}</div></div>')
-            blocos += f'<div class="pg"><div class="n">{nome_p(prog)} <span>· {tv.DIAS_TXT.get(prog, "")}</span></div><div class="par">{cel}</div></div>'
-        st.markdown(f'<div class="painel">{blocos}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="rodape">Verde ≥ 80% · amarelo 20–80% · vermelho &lt; 20%</div>', unsafe_allow_html=True)
-
-    c1, c2 = st.columns(2)
-    with c1, cartao("Fechamento projetado em % da meta 100%", "acima de 100% = meta atingida no cenário central"):
-        fig = go.Figure()
-        ordem = [p for p in tv.PROGRAMAS if p in F.index.get_level_values(0)][::-1]
-        for i, met in enumerate(tv.METRICAS):
-            v = [F.loc[(p, met), "fech"] / F.loc[(p, met), "meta100"] * 100 if (p, met) in F.index else np.nan for p in ordem]
-            sem = [tv.semaforo(F.loc[(p, met), "p100"]) if (p, met) in F.index else "–" for p in ordem]
-            fig.add_bar(y=ordem, x=v, orientation="h", name=met, xaxis=f"x{i + 1 if i else ''}",
-                        marker_color=[COR_SEM[s] for s in sem], text=[f"{br(x, 1)}%" for x in v], textposition="outside",
-                        textfont=dict(size=10), cliponaxis=False,
-                        customdata=[[tv.fmt_p(F.loc[(p, met), 'p100']), br(F.loc[(p, met), 'fech']), br(F.loc[(p, met), 'meta100'])]
-                                    if (p, met) in F.index else ["", "", ""] for p in ordem],
-                        hovertemplate="<b>%{y} · " + met + "</b><br>fechamento %{customdata[1]} · meta %{customdata[2]}"
-                                      "<br>%{x:.1f}% da meta · chance %{customdata[0]}<extra></extra>")
-        lo = min(90, np.nanmin([F["fech"] / F["meta100"] * 100]) - 2)
-        layout(fig, 400).update_layout(
-            xaxis=dict(domain=[0, .47], range=[lo, 115], ticksuffix="%", title_text="Audiência", title_font=dict(size=11)),
-            xaxis2=dict(domain=[.53, 1], range=[lo, 115], ticksuffix="%", title_text="Share", title_font=dict(size=11),
-                        showgrid=False, linecolor=EIXO, tickfont=dict(size=11)),
-            bargap=.35)
-        for ax in ("x", "x2"):
-            fig.add_shape(type="line", xref=ax, yref="paper", x0=100, x1=100, y0=0, y1=1, line=dict(color=TINTA, width=1, dash="dot"))
-        fig.update_yaxes(tickfont=dict(size=11))
-        fig.update_xaxes(tickformat=".0f", gridcolor=GRADE, showgrid=True)
-        st.plotly_chart(fig, config=CFG, key="v_pct_meta")
-
-    with c2, cartao(f"O que mudou desde {ANT}", "chance da meta 100% · rodada anterior → agora"):
-        if vs is None:
-            st.info("A planilha desta rodada não traz a comparação com a rodada anterior.")
-        else:
-            v = vs.reindex([(p, m) for p in tv.PROGRAMAS for m in tv.METRICAS if (p, m) in vs.index])[::-1]
-            rot_y = [f"{p} · {'aud.' if m == 'Audiência' else 'share'}" for p, m in v.index]
-            fig = go.Figure()
-            for x0, x1, cor in [(0, 20, "rgba(198,40,40,.07)"), (20, 80, "rgba(245,166,35,.09)"), (80, 100, "rgba(46,125,50,.08)")]:
-                fig.add_vrect(x0=x0, x1=x1, fillcolor=cor, line_width=0, layer="below")
-            for y, a, b in zip(rot_y, v["p_ant"] * 100, v["p"] * 100):
-                fig.add_scatter(x=[a, b], y=[y, y], mode="lines", line=dict(color=CINZA_CLARO, width=2), hoverinfo="skip", showlegend=False)
-            fig.add_scatter(x=v["p_ant"] * 100, y=rot_y, mode="markers", name=f"rodada de {ANT}",
-                            marker=dict(size=8, color=CARTAO, line=dict(color=CINZA, width=1.5)),
-                            hovertemplate="%{y}<br>" + ANT + ": %{x:.1f}%<extra></extra>")
-            fig.add_scatter(x=v["p"] * 100, y=rot_y, mode="markers", name="agora",
-                            marker=dict(size=10, color=[COR_SEM[tv.semaforo(p)] for p in v["p"]],
-                                        symbol=["star" if str(m).upper().startswith("MUDOU") else "circle" for m in v.get("mudou", [""] * len(v))]),
-                            customdata=[dpp(x) for x in v["dp"]],
-                            hovertemplate="%{y}<br>agora: %{x:.1f}% (%{customdata})<extra></extra>")
-            layout(fig, 400, legenda=True).update_xaxes(range=[-2, 102], ticksuffix="%", showgrid=True, gridcolor=GRADE,
-                                                         tickvals=[0, 20, 50, 80, 100])
-            fig.update_yaxes(tickfont=dict(size=10))
-            st.plotly_chart(fig, config=CFG, key="v_mudou")
-            mud = [f"{p} ({'aud.' if m == 'Audiência' else 'share'})" for (p, m), x in vs["mudou"].items()
-                   if str(x).upper().startswith("MUDOU")] if "mudou" in vs else []
-            if mud:
-                st.markdown(f'<div class="rodape">★ trocou de cor: {_lista(mud)}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="rodape">Fonte: Kantar IBOPE (Instar) · TT Domicílios · Grande Salvador · metas do BI. '
-                f'Chance = parcela dos cenários simulados (Monte Carlo) em que o fechamento do ano fica na meta ou acima.</div>',
-                unsafe_allow_html=True)
-
-
-
-
 # =================================================================================== PÁGINA 2 · PROGRAMAS
 _ARRASTE_JS = r"""
 (function () {
@@ -1049,163 +999,6 @@ def arrastar_selecionados(chave, txt):
       const s = D.createElement("script"); s.textContent = {json.dumps(js)}; D.head.appendChild(s);
     }}
     </script>""")
-
-
-def _exib(prog, met):
-    """(exibições até o corte, exibições em cada mês restante) — da planilha da rodada ou pelo calendário."""
-    meses = list(mensal_proj(prog, met).index)
-    try:
-        a = R["acum"].loc[(prog, met)]
-        n = float(a[next(c for c in a.index if str(c).startswith("exib. até"))])
-        w = [float(x) for x in str(a[next(c for c in a.index if str(c).startswith("exib.") and "/" in str(c) and "até" not in str(c))]).split("/")]
-        if len(w) == len(meses):
-            return n, np.array(w)
-    except (KeyError, StopIteration, ValueError, TypeError):
-        pass
-    n = tv.n_exib(prog, pd.Timestamp(ANO, 1, 1), CORTE)
-    return float(n), np.array([tv.n_exib(prog, m, m + pd.offsets.MonthEnd(0)) for m in meses], float)
-
-
-def _nivel(v, r):
-    for m, rot in [("meta120", "Meta 120%"), ("meta100", "Meta 100%"), ("meta75", "Meta 75%")]:
-        if v >= r[m] - 1e-9:
-            return rot
-    return "abaixo da 75%"
-
-
-def grafico_ano(prog, met, chave):
-    r = linha(prog, met)
-    s = serie(prog, met)
-    atual = s[str(ANO)].dropna() if len(s) else s
-    antes = s[str(ANO - 1)].dropna() if len(s) else s
-    pm = mensal_proj(prog, met)
-    cor = AZUL            # realizado em azul e projeção em laranja nas duas métricas (como na apresentação)
-    fig = go.Figure()
-    xm = lambda idx: [MESES[d.month - 1] for d in idx]   # noqa: E731
-    if len(pm) and len(atual):
-        x = xm([atual.index[-1]] + list(pm.index))
-        base = [atual.iloc[-1]]
-        fig.add_scatter(x=x + x[::-1], y=base + list(pm["s95"]) + (base + list(pm["i95"]))[::-1], fill="toself", mode="lines",
-                        fillcolor="rgba(235,104,52,.12)", line=dict(width=0), name="faixa 95%", hoverinfo="skip")
-        fig.add_scatter(x=x + x[::-1], y=base + list(pm["s80"]) + (base + list(pm["i80"]))[::-1], fill="toself", mode="lines",
-                        fillcolor="rgba(235,104,52,.25)", line=dict(width=0), name="faixa 80%", hoverinfo="skip")
-    if len(antes):
-        fig.add_scatter(x=xm(antes.index), y=antes.values, mode="lines", name=str(ANO - 1),
-                        line=dict(color=CINZA_CLARO, width=1.5, dash="dot"),
-                        hovertemplate=f"{ANO - 1} · %{{x}}: %{{y:.2f}}<extra></extra>")
-    bi = metas_bi(prog, met)
-    if len(bi):
-        bi = bi[bi.index.year == ANO]
-        fig.add_scatter(x=xm(bi.index), y=bi.values, mode="lines+markers", name="meta mensal 100% (BI)",
-                        line=dict(color=TINTA, width=1.2), marker=dict(symbol="square", size=6, color=TINTA),
-                        hovertemplate="meta BI · %{x}: %{y:.2f}<extra></extra>")
-    if len(atual):
-        fig.add_scatter(x=xm(atual.index), y=atual.values, mode="lines+markers+text", name=f"realizado {ANO}",
-                        line=dict(color=cor, width=2.5), marker=dict(size=7, color=cor),
-                        text=[br(v, 1) for v in atual.values], textposition="top center", textfont=dict(size=10, color=cor),
-                        hovertemplate=f"{ANO} · %{{x}}: %{{y:.2f}}<extra></extra>")
-    if len(pm) and len(atual):
-        x = xm([atual.index[-1]] + list(pm.index))
-        fig.add_scatter(x=x, y=[atual.iloc[-1]] + list(pm["proj"]), mode="lines+markers+text", name="projeção",
-                        line=dict(color=LARANJA, width=2, dash="dash"), marker=dict(size=[0] + [7] * len(pm), color=LARANJA),
-                        text=[""] + [br(v, 2) for v in pm["proj"]], textposition="bottom center",
-                        textfont=dict(size=10, color=LARANJA),
-                        customdata=[["", ""]] + [[f"{br(a)}–{br(b)}", f"{br(c)}–{br(d)}"] for a, b, c, d in
-                                                 zip(pm["i80"], pm["s80"], pm["i95"], pm["s95"])],
-                        hovertemplate="projeção · %{x}: %{y:.2f}<br>faixa 80%: %{customdata[0]}<br>faixa 95%: %{customdata[1]}<extra></extra>")
-    if r is not None and len(pm):
-        xr = xm(pm.index)
-        fig.add_scatter(x=xr, y=[r["nec100"]] * len(xr), mode="lines", name=f"média necessária p/ meta 100% ({br(r['nec100'])})",
-                        line=dict(color="#c62828", width=1.5, dash="dash"),
-                        hovertemplate=f"média necessária em {REST} para a meta 100%: {br(r['nec100'])}<extra></extra>")
-    layout(fig, 340, legenda=True)
-    fig.update_xaxes(categoryorder="array", categoryarray=MESES)
-    fig.update_yaxes(tickformat=",.1f")
-    st.plotly_chart(fig, config=CFG, key=chave)
-
-
-def pagina_programas():
-    if BASE.empty:
-        st.warning("A base mensal está vazia: falta o arquivo dados/tv_mensal.csv no repositório. Suba a pasta dados/ "
-                   "ou envie a planilha consolidada em ⚙ Atualizar dados (no rodapé).")
-        return
-    progs = [p for p in tv.PROGRAMAS if p in set(BASE["programa"])]
-    if R:                       # a ficha mostra só faixas e programas que entram na projeção (o 7h às 24h fica de fora)
-        progs = [p for p in progs if p in R["fech"].index.get_level_values(0)] or progs
-    f = st.columns([2.2, 5])
-    prog = st.segmented_control("Faixa ou programa", progs, default=progs[0], key="p2_prog", format_func=nome_p) or progs[0]
-    st.markdown(f'<div class="vs" style="margin:-4px 0 6px">{nome_p(prog)} · {tv.DIAS_TXT.get(prog, "")}</div>', unsafe_allow_html=True)
-
-    # ---- KPIs por métrica
-    if R:
-        lista, leituras, cards = [], [], ""
-        for met in tv.METRICAS:
-            r = linha(prog, met)
-            if r is None:
-                continue
-            sem = tv.semaforo(r["p100"])
-            d, dl = "", ""
-            vs = R.get("vs")
-            if vs is not None and (prog, met) in vs.index:
-                dl = dpp(vs.loc[(prog, met), 'dp'])
-                d = f" · {dl} vs {ANT}"
-            folga = r["proj_rest"] - r["nec100"]
-            lista += [(f"{met} · acumulado até {CORTE:%d/%m}", br(r["acum"]), f"média de jan a {MESES[CORTE.month - 1]}/{ANO}", COR_MET[met]),
-                      (f"{met} · fechamento {ANO}", br(r["fech"]), f"faixa 95%: {br(r['ic_inf'])}–{br(r['ic_sup'])}", COR_MET[met]),
-                      (f"{met} · chance da meta 100% ({br(r['meta100'])})", tv.fmt_p(r["p100"]), f"{sem_html(sem)}{d}", COR_SEM[sem]),
-                      (f"{met} · média necessária em {REST}", br(r["nec100"]),
-                       f"projeção {br(r['proj_rest'])} · {'folga' if folga >= 0 else 'déficit'} de "
-                       f"<span class='{'up' if folga >= 0 else 'down'}'>{sinal(folga)} pt</span>", COR_MET[met])]
-            leituras.append(f"<b>{met}:</b> fecha em {br(r['fech'])} (faixa 95%: {br(r['ic_inf'])}–{br(r['ic_sup'])}); "
-                            f"para a meta 100% ({br(r['meta100'])}) precisa de média {br(r['nec100'])} em {REST}, "
-                            f"e a projeção é {br(r['proj_rest'])}. Chance: <b>{tv.fmt_p(r['p100'])}</b> ({sem.lower()}).")
-            pct = max(0.0, min(100.0, float(r["p100"]) * 100))
-            cor_f = SOBE if folga >= 0 else DESCE
-            cards += (f'<div class="gcard" style="--c:{COR_SEM[sem]}"><div class="anel" style="--p:{pct:.1f}"><div class="meio">'
-                      f'<div><div class="gv">{tv.fmt_p(r["p100"])}</div><div class="gl">chance da<br>meta 100%</div></div></div></div>'
-                      f'<div class="gtxt"><div class="gk">{met} ({tv.SIGLA[met]}) · meta 100% = {br(r["meta100"])}</div>'
-                      f'<div class="gf">fecha em <b>{br(r["fech"])}</b> <span style="color:{CINZA}; font-size:.78rem">'
-                      f'({br(r["ic_inf"])}–{br(r["ic_sup"])})</span></div>'
-                      f'<div>acumulado até {CORTE:%d/%m}: <b>{br(r["acum"])}</b></div>'
-                      f'<div>{REST}: precisa de <b>{br(r["nec100"])}</b> · projeção <b>{br(r["proj_rest"])}</b> · '
-                      f'<b style="color:{cor_f}">{"folga" if folga >= 0 else "déficit"} {sinal(folga)} pt</b></div>'
-                      f'<div style="margin-top:6px"><span class="chip">{sem}</span>{(dl + " vs " + ANT) if dl else ""}</div></div></div>')
-        _registra_kpis(lista)
-        if cards:
-            st.markdown(f'<div class="hero">{cards}</div>', unsafe_allow_html=True)
-
-        # ---- gráficos do ano
-        cols = st.columns(2)
-        for col, met in zip(cols, tv.METRICAS):
-            with col, cartao(f"{nome_p(prog)} · {met} ({tv.SIGLA[met]}) · {ANO}", f"realizado, projeção de {REST} e média necessária"):
-                grafico_ano(prog, met, f"v_ano_{met}")
-
-        # ---- cenários de leitura rápida
-        with cartao(f"Cenários de leitura rápida · se {REST} repetir…", "fechamento do ano em cada cenário e meta alcançada"):
-            linhas = ""
-            for met in tv.METRICAS:
-                r = linha(prog, met)
-                s = serie(prog, met)
-                if r is None or not len(s):
-                    continue
-                atual = s[str(ANO)].dropna()
-                n, w = _exib(prog, met)
-                fech = lambda v: (r["acum"] * n + v * w.sum()) / (n + w.sum())   # noqa: E731
-                cen = [(f"pior mês de {ANO} ({rot_mes(atual.idxmin(), False)})", atual.min()),
-                       (f"média de jan a {MESES[CORTE.month - 1]}", r["acum"]),
-                       ("projeção (Combinação)", r["proj_rest"]),
-                       (f"melhor mês de {ANO} ({rot_mes(atual.idxmax(), False)})", atual.max())]
-                for i, (rot, v) in enumerate(cen):
-                    fv = fech(v)
-                    nv = _nivel(fv, r)
-                    corn = {"Meta 120%": COR_SEM["Provável"], "Meta 100%": COR_SEM["Provável"], "Meta 75%": COR_SEM["Indefinido"]}.get(nv, COR_SEM["Improvável"])
-                    linhas += (f"<tr><td>{met if i == 0 else ''}</td><td>{rot}</td><td class='n'>{br(v)}</td>"
-                               f"<td class='n'><b>{br(fv)}</b></td><td style='color:{corn}; font-weight:600'>{nv}</td></tr>")
-            st.markdown("<table class='rk'><tr><th>Métrica</th><th>Se a média de " + REST + " for…</th><th class='n'>média</th>"
-                        "<th class='n'>fechamento</th><th>nível</th></tr>" + linhas + "</table>", unsafe_allow_html=True)
-    else:
-        st.info("Sem rodada de projeção carregada: o painel mostra só o histórico.")
-
 
 
 # =================================================================================== VISÃO GERAL · DESEMPENHO
@@ -1434,7 +1227,6 @@ def janela_curva():
         st.dataframe(t.map(lambda v: "" if pd.isna(v) else br(v)), width="stretch")
     if st.button("Minimizar", icon=":material/close_fullscreen:", key="min_curva", type="primary"):
         st.rerun()
-
 
 
 def _dupla(a, b, larg=(1, 1)):
@@ -1749,157 +1541,10 @@ with paginas[0]:
     pagina_desempenho()
 
 
-
-
 # =================================================================================== PÁGINA 3 · RESULTADOS DETALHADOS
 def _cel_p(p):
     s = tv.semaforo(p)
     return f"<td class='n' style='background:{COR_SEM_CLARO[s]}'>{tv.fmt_p(p)}</td>"
-
-
-def pagina_resultados():
-    if not R:
-        st.warning("Nenhuma rodada de projeção carregada.")
-        return
-    F = R["fech"]
-    abas_r = st.tabs(["📋 Metas por programa", "🧪 Sensibilidade", "🎯 Acompanhamento do mês", "✅ Validação e backtest"])
-    with abas_r[0]:
-        met = st.segmented_control("Métrica", tv.METRICAS, default="Audiência", key="p3_met") or "Audiência"
-        with cartao(f"Resultados detalhados · {met} ({tv.SIGLA[met]})",
-                    f"acumulado até {CORTE:%d/%m}, fechamento projetado, média necessária e chance de cada meta"):
-            linhas = ""
-            for prog in tv.PROGRAMAS:
-                if (prog, met) not in F.index:
-                    continue
-                r = F.loc[(prog, met)]
-                linhas += (f"<tr><td><b>{prog}</b></td><td class='n'>{br(r['acum'])}</td>"
-                           f"<td class='n'><b>{br(r['fech'])}</b> <span style='color:{CINZA}'>({br(r['ic_inf'])}–{br(r['ic_sup'])})</span></td>"
-                           f"<td class='n'>{br(r['meta100'])}</td><td class='n'>{br(r['nec100'])}</td><td class='n'>{br(r['proj_rest'])}</td>"
-                           + _cel_p(r["p75"]) + _cel_p(r["p100"]) + _cel_p(r["p120"]) + "</tr>")
-            st.markdown(f"<div style='overflow-x:auto'><table class='rk'><tr><th>Faixa / programa</th><th class='n'>Acum. {CORTE:%d/%m}</th>"
-                        f"<th class='n'>Fechamento (faixa 95%)</th><th class='n'>Meta 100%</th><th class='n'>Média nec. {REST}</th>"
-                        f"<th class='n'>Média proj. {REST}</th><th class='n'>P(75%)</th><th class='n'>P(100%)</th><th class='n'>P(120%)</th></tr>"
-                        f"{linhas}</table></div>", unsafe_allow_html=True)
-            st.markdown('<div class="rodape">Verde ≥ 80% · amarelo 20–80% · vermelho &lt; 20%. Metas 75%, 100% e 120% do BI.</div>',
-                        unsafe_allow_html=True)
-    with abas_r[1]:
-        # ---- sensibilidade
-        sens = R.get("sens")
-        if sens is not None:
-            with cartao("Sensibilidade · chance da meta 100% mudando uma hipótese de cada vez",
-                        "em vermelho: a hipótese muda a cor do semáforo"):
-                cols = [c for c in sens.columns if c not in ("oficial", "p viés", "melhor individual") and "proj." not in str(c)]
-                mostrar = st.toggle("Mostrar só as séries em que alguma hipótese muda a cor", value=False, key="p3_sens")
-                linhas = ""
-                for (prog, m), r in sens.iterrows():
-                    of = r["oficial"]
-                    muda = any(pd.notna(r[c]) and tv.semaforo(r[c]) != tv.semaforo(of) for c in cols)
-                    if mostrar and not muda:
-                        continue
-                    cel = "".join(
-                        "<td class='n' style='color:#8a8984'>—</td>" if pd.isna(r[c]) else
-                        f"<td class='n' style='{'color:#c62828; font-weight:700' if tv.semaforo(r[c]) != tv.semaforo(of) else ''}'>{tv.fmt_p(r[c])}</td>"
-                        for c in cols)
-                    linhas += (f"<tr><td>{prog} · {'aud.' if m == 'Audiência' else 'share'}</td>"
-                               f"<td class='n' style='background:{COR_SEM_CLARO[tv.semaforo(of)]}'><b>{tv.fmt_p(of)}</b></td>{cel}"
-                               f"<td style='color:{CINZA}'>{r.get('melhor individual', '')}</td></tr>")
-                cab = "".join(f"<th class='n'>{c}</th>" for c in cols)
-                st.markdown(f"<div style='overflow-x:auto'><table class='rk'><tr><th>Série</th><th class='n'>Oficial</th>{cab}"
-                            f"<th>Melhor modelo individual</th></tr>{linhas}</table></div>", unsafe_allow_html=True)
-    with abas_r[2]:
-        # ---- acompanhamento do último mês
-        ac = R.get("acomp")
-        c1, c2 = st.columns([3, 2])
-        if ac is not None:
-            mes_ac = R["meta"].get("mes_acomp", "último mês")
-            col_proj = next((c for c in ac.columns if str(c).startswith("proj. ") and "pipeline" not in str(c)), None)
-            with c1, cartao(f"{mes_ac.capitalize()}: projetado × realizado", "posição do realizado na distribuição projetada"):
-                v = ac.reindex([(p, m) for p in tv.PROGRAMAS for m in tv.METRICAS if (p, m) in ac.index])[::-1]
-                rot_y = [f"{p} · {'aud.' if m == 'Audiência' else 'share'}" for p, m in v.index]
-                fig = go.Figure()
-                fig.add_vrect(x0=2.5, x1=97.5, fillcolor="rgba(235,104,52,.10)", line_width=0, layer="below")
-                fig.add_vrect(x0=10, x1=90, fillcolor="rgba(235,104,52,.16)", line_width=0, layer="below")
-                fig.add_vline(x=50, line=dict(color=CINZA, width=1, dash="dot"))
-                dentro = v["percentil"].between(.1, .9)
-                fig.add_scatter(x=v["percentil"] * 100, y=rot_y, mode="markers",
-                                marker=dict(size=10, color=[AZUL if d else "#c62828" for d in dentro]),
-                                customdata=np.c_[[br(x) for x in v["realizado"]], [br(x) for x in v[col_proj]] if col_proj else [""] * len(v),
-                                                 v["faixa 80%"].astype(str).str.replace(".", ","), v["posição"]],
-                                hovertemplate="%{y}<br>realizado %{customdata[0]} · projetado %{customdata[1]}<br>faixa 80%: %{customdata[2]}"
-                                              "<br>%{customdata[3]}<extra></extra>")
-                layout(fig, 420).update_xaxes(range=[0, 100], ticksuffix="%", tickvals=[2.5, 10, 50, 90, 97.5], showgrid=False,
-                                              title_text="percentil do realizado na projeção (faixa 80% = 10–90 · faixa 95% = 2,5–97,5)",
-                                              title_font=dict(size=10))
-                fig.update_yaxes(tickfont=dict(size=10))
-                st.plotly_chart(fig, config=CFG, key="v_acomp")
-            with c2:
-                n = len(v)
-                d80 = int(v["percentil"].between(.1, .9).sum())
-                f95 = v[~v["percentil"].between(.025, .975)]
-                kpis([("Dentro da faixa de 80%", f"{d80} de {n}", f"esperado ≈ {round(.8 * n)}", AZUL),
-                      ("Fora da faixa de 95%", f"{len(f95)} de {n}",
-                       (", ".join(f"{p} ({'aud.' if m == 'Audiência' else 'share'})" for p, m in f95.index) or "nenhuma") +
-                       f" · esperado ≈ {max(1, round(.05 * n))}", "#c62828")])
-                erro_col = next((c for c in ac.columns if str(c).startswith("erro")), None)
-                if erro_col:
-                    txt = []
-                    for m in tv.METRICAS:
-                        e = ac.xs(m, level=1)[erro_col]
-                        txt.append(f"<b>{m}:</b> erro médio {sinal(e.mean())} · {int((e > 0).sum())} de {len(e)} acima do projetado")
-                    st.markdown('<div class="leitura">' + "<br>".join(txt) + "</div>", unsafe_allow_html=True)
-    with abas_r[3]:
-        # ---- validação
-        mae = R.get("mae")
-        if mae is not None:
-            with cartao("Validação · erro médio absoluto (pt)", "reprojeções do passado, até 3 meses à frente"):
-                mods = [c for c in ["Combinação", "Média 12m", "ETS(A,N,A)", "Nível local + sazonal + eventos", "AR(1) + sazonal + eventos"] if c in mae]
-                v = mae.reindex([(p, m) for p in tv.PROGRAMAS for m in tv.METRICAS if (p, m) in mae.index])
-                linhas = ""
-                for (p, m), r in v.iterrows():
-                    melhor = min(mods, key=lambda c: r[c] if pd.notna(r[c]) else 1e9)
-                    linhas += (f"<tr><td>{p} · {'aud.' if m == 'Audiência' else 'share'}</td>" +
-                               "".join(f"<td class='n' style='{'font-weight:700; color:' + SOBE if c == melhor else ''}'>{br(r[c])}</td>" for c in mods) + "</tr>")
-                curto = {"Combinação": "Comb.", "Média 12m": "Méd. 12m", "ETS(A,N,A)": "ETS", "Nível local + sazonal + eventos": "Nív. local",
-                         "AR(1) + sazonal + eventos": "AR(1)"}
-                st.markdown("<div style='overflow-x:auto; max-height:360px'><table class='rk'><tr><th>Série</th>" +
-                            "".join(f"<th class='n' title='{c}'>{curto[c]}</th>" for c in mods) + f"</tr>{linhas}</table></div>",
-                            unsafe_allow_html=True)
-                st.markdown('<div class="rodape">Em verde, o menor erro da série.</div>', unsafe_allow_html=True)
-
-        bt = R.get("backtest")
-        if bt is not None:
-            with cartao("Backtest do fechamento anual", f"o mesmo procedimento aplicado em {CORTE:%d/%m} de anos anteriores"):
-                col_err = "erro"
-                dentro = bt["dentro da margem?"].astype(str).str.lower().eq("sim")
-                kpis([("Fechamentos dentro da margem", f"{int(dentro.sum())} de {len(bt)}", "margem = meia-largura da faixa 95% atual", SOBE),
-                      ("Erro médio absoluto · audiência", br(bt.loc[bt["metrica"] == "Audiência", col_err].abs().mean()), "pt", AZUL),
-                      ("Erro médio absoluto · share", br(bt.loc[bt["metrica"] == "Share", col_err].abs().mean()), "pt", LARANJA)])
-                t = bt.copy()
-                t["série"] = t["programa"] + " · " + t["metrica"].map({"Audiência": "aud.", "Share": "share"})
-                t = t[["série", "ano", "acum. jan–set" if "acum. jan–set" in t else t.columns[3], "projetado", "realizado", "erro",
-                       "meia-largura IC95 atual", "dentro da margem?"]]
-                st.dataframe(t.style.format({c: "{:.2f}" for c in t.columns if t[c].dtype.kind == "f"}, decimal=","),
-                             hide_index=True, width="stretch", height=300)
-
-# =================================================================================== MODELO DIÁRIO (por faixa)
-PASTA_DIARIAS = os.path.join("dados", "rodadas_diarias")
-
-
-def arquivos_rodadas_diarias():
-    if banco.ativo():
-        return [a for a in banco.rodadas_para_pasta(PASTA_RODADAS_BANCO) if "diario" in os.path.basename(a).lower()]
-    return diario.arquivos_diarios([PASTA_DIARIAS, "dados"])
-
-
-@st.cache_data(show_spinner=False)
-def carregar_diarias(assinatura=None):
-    return diario.carregar_rodadas(arquivos_rodadas_diarias())
-
-
-def _assinatura_diarias():
-    if banco.ativo():
-        return ("banco",) + banco.assinatura(["tv_rodadas"])
-    return tuple(sorted((a, os.path.getmtime(a), os.path.getsize(a)) for a in arquivos_rodadas_diarias()))
 
 
 def pagina_diaria(faixa):
@@ -2040,28 +1685,49 @@ def pagina_diaria(faixa):
 with paginas[1]:
     st.session_state["_aba_atual"] = "Projeções e metas"
     pagina_diaria(faixa_atual())
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    pagina_visao()
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    secao(3, "Ficha da faixa ou do programa", "acumulado, fechamento, chance e o que precisa acontecer até dezembro")
-    pagina_programas()
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    secao(4, "Resultados detalhados", "tabelas, sensibilidade, acompanhamento do último mês e validação do método")
-    pagina_resultados()
 
 
 # =================================================================================== PÁGINA 5 · ATUALIZAR DADOS
-def _senha_ok(chave):
-    senha = PAR.get("senha") or segredo("senha_atualizacao")
-    return (not senha) or st.session_state.get(chave, "") == senha
+@protegido("rodada_diaria.excluir", "tv_rodadas", detalhe=lambda nome, *a, **k: dict(recurso_id=nome))
+def _excluir_rodada_diaria(nome):
+    """Exclui uma rodada do modelo diário: no banco (tv_rodadas) ou, na demonstração, o arquivo da sessão."""
+    if _banco_ativo():
+        banco.excluir("tv_rodadas", nome_arquivo=nome)
+    for pasta in (PASTA_DIARIAS, PASTA_RODADAS_BANCO):
+        cam = os.path.join(pasta, os.path.basename(nome))
+        if os.path.exists(cam):
+            os.remove(cam)
+    return nome
 
 
+def _permissao_ok(chave=None):
+    """Permissão para gravar (login corporativo, permissão "atualizar"). A negativa vai para a auditoria."""
+    if pode_gravar():
+        return True
+    registra("painel.gravar", resultado="negado", recurso_tipo="painel", erro_codigo="sem_permissao_atualizar")
+    return False
+
+
+def _detalhe_gravacao(caminho, conteudo=None, msg=None, *a, **k):
+    """Nome da ação na auditoria conforme o arquivo gravado."""
+    nome = os.path.basename(str(caminho))
+    if os.path.abspath(str(caminho)) == os.path.abspath(ARQ_PAR):
+        return dict(acao="parametros.salvar", recurso_tipo="painel_parametros", recurso_id="tv", recurso_rotulo=msg)
+    if nome.lower().endswith(".xlsx"):
+        acao = "rodada_diaria.upload" if "diario" in nome.lower() else "rodada.upload"
+        return dict(acao=acao, recurso_tipo="tv_rodadas", recurso_id=nome, recurso_rotulo=msg)
+    return dict(acao="arquivo.salvar", recurso_tipo="arquivo", recurso_id=nome, recurso_rotulo=msg)
+
+
+@protegido("arquivo.salvar", "arquivo", detalhe=_detalhe_gravacao)
 def _gravar(caminho, conteudo, msg):
-    """Grava no disco e, se configurado, no banco de dados ou no GitHub. Devolve True/False/None (None = sem destino remoto)."""
+    """Grava no banco de dados (e na pasta de trabalho local). Devolve True/False, ou None na demonstração."""
     os.makedirs(os.path.dirname(caminho) or ".", exist_ok=True)
     with open(caminho, "wb") as fh:
         fh.write(conteudo)
-    if banco.ativo():
+    if MODO_DEMO:
+        return None                                   # demonstração: vale só nesta sessão do app
+    if _banco_ativo():
         try:
             if os.path.abspath(caminho) == os.path.abspath(ARQ_PAR):
                 banco.salvar_parametros("tv", {k: v for k, v in json.loads(conteudo.decode("utf-8")).items() if k != "senha"})
@@ -2071,23 +1737,20 @@ def _gravar(caminho, conteudo, msg):
         except Exception as ex:
             st.session_state["msg_erro"] = f"Não consegui gravar no banco de dados ({ex.__class__.__name__})."
             return False
-    ok = github_salvar(caminho.replace(os.sep, "/"), conteudo, msg)
-    if ok is False:
-        st.session_state["msg_erro"] = f"{caminho} salvo aqui, mas o envio ao GitHub falhou (confira o token em Secrets)."
-    return ok
+    return None
 
 
 def _salvar_par(par, msg):
     _gravar(ARQ_PAR, json.dumps(par, ensure_ascii=False, indent=2).encode("utf-8"), msg)
 
 
+@protegido("audiencia.upload", "tv_audiencia_mensal")
 def _salvar_base(nova, descricao):
     os.makedirs("backups", exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     if os.path.exists(ARQ_BASE):
         bk = os.path.join("backups", f"tv_mensal_{ts}.csv")
         shutil.copy(ARQ_BASE, bk)
-        github_salvar(f"backups/tv_mensal_{ts}.csv", open(bk, "rb").read(), f"Backup antes de: {descricao}")
     tv.gravar_base(nova, ARQ_BASE)
     _gravar(ARQ_BASE, open(ARQ_BASE, "rb").read(), f"Base mensal: {descricao}")
     par = dict(PAR)
@@ -2106,27 +1769,36 @@ def pagina_atualizar():
     for k, fn in (("msg_ok", st.success), ("msg_erro", st.error)):
         if st.session_state.get(k):
             fn(st.session_state.pop(k))
-    gh = (segredo("github") or {}).get("repo")
     N = st.session_state.get("up_nonce", 0)
     ult = BASE["mes"].max() if len(BASE) else None
-    kpis([("Rodada em uso", f"{CORTE:%d/%m/%Y}" if CORTE is not None else "–", ATIVA or "nenhuma", TOPO),
+    _cortes = {f: _corte_diario(f) for f in diario.FAIXAS}
+    kpis([("Modelo diário", " · ".join(f"{f[:2]} {c:%d/%m}" for f, c in _cortes.items() if c is not None) or "–",
+           "dados até, por faixa (6h e 7h às 24h)", TOPO),
           ("Base mensal", rot_mes(ult) if ult is not None else "–",
            f"{BASE.groupby(['programa', 'metrica']).ngroups} séries · {PAR.get('dados', {}).get('descricao', '')}", AZUL),
-          ("Onde fica salvo", "Banco de dados" if banco.ativo() else ("GitHub" if gh else "Só nesta sessão"),
-           "banco da empresa" if banco.ativo() else (gh or "perde-se quando o app reinicia"), CINZA)])
-    if not gh and not banco.ativo():
-        st.warning("**Os envios feitos aqui não ficam salvos.** Sem o bloco `[github]` em Settings → Secrets, as mudanças valem só até "
-                   "o app reiniciar. Configure o token (veja o secrets_exemplo.toml) ou suba os arquivos direto na pasta `dados/` do repositório.")
-    tem_senha = bool(PAR.get("senha") or segredo("senha_atualizacao"))
+          ("Onde fica salvo", "Banco de dados" if _banco_ativo() else "Só nesta sessão",
+           "banco da empresa" if _banco_ativo() else "demonstração: perde-se quando o app reinicia", CINZA)])
+    tem_senha = False                       # login corporativo: sem senha (a permissão vem do gateway)
+    if MODO_DEMO:
+        st.segmented_control("Simular perfil (só na demonstração)", list(PERFIS_DEMO), default="Pode atualizar",
+                             key="perfil_demo", help="No Labs, quem é o usuário e o que ele pode fazer vem do login corporativo.")
+    _u = usuario_atual()
+    if not pode_gravar():
+        quem = f"{_u.nome} ({_u.email})" if _u else "Usuário não identificado"
+        st.warning(f"**{quem}** · Seu perfil permite apenas consulta: os dados aparecem normalmente, mas não é possível "
+                   f"enviar planilhas nem alterar parâmetros. Para receber o acesso, fale com a TI.")
+        return
+    if _u:
+        st.caption(f"Conectado como **{_u.nome}** ({_u.email}) · " + ("na demonstração, nada é gravado de verdade." if MODO_DEMO
+                   else "as alterações feitas aqui ficam registradas na auditoria."))
 
     c1, c2 = st.columns(2)
     # ---- 1. nova rodada
-    with c1, cartao("1 · Enviar uma rodada da projeção",
-                    "a planilha de resultado exportada pelo notebook (resultado_projecao_*.xlsx), com as abas fechamento_e_metas, "
-                    "projecao_mensal e as demais"):
-        up = st.file_uploader("Planilha de resultado", type=["xlsx"], key=f"up_rod_{N}",
-                              help="Aceita a do modelo mensal (resultado_projecao_*.xlsx) e a do modelo diário "
-                                   "(projecao_2026_6h24h_diario_*.xlsx / projecao_2026_7h24h_diario_*.xlsx)")
+    with c1, cartao("1 · Enviar uma rodada do modelo diário",
+                    "a planilha de resultado do notebook diário de cada faixa (projecao_AAAA_6h24h_diario_AAAAMMDD.xlsx ou "
+                    "…_7h24h_…), com as abas fechamento_e_metas, projecao_mensal, projecao_diaria e as demais"):
+        up = st.file_uploader("Planilha de resultado do modelo diário", type=["xlsx"], key=f"up_rod_{N}",
+                              help="projecao_2026_6h24h_diario_*.xlsx ou projecao_2026_7h24h_diario_*.xlsx")
         if up is not None and diario.eh_rodada_diaria(up):
             try:
                 rd = diario.ler_rodada_diaria(up, up.name)
@@ -2135,11 +1807,9 @@ def pagina_atualizar():
                 st.markdown(f"<div class='leitura'>Modelo diário · <b>{rd['faixa']}</b> · dados até <b>{rd['corte']:%d/%m/%Y}</b><br>"
                             + "<br>".join(f"{m}: fechamento {br(x.loc[m, 'fechamento'])}, chance da meta 100% {tv.fmt_p(x.loc[m, 'P(100%)'])}"
                                           for m in x.index) + "</div>", unsafe_allow_html=True)
-                if tem_senha:
-                    st.text_input("Senha", type="password", key="pw_rd")
                 if st.button("Salvar a rodada do modelo diário", type="primary", key="bt_rd"):
-                    if not _senha_ok("pw_rd"):
-                        st.error("Senha incorreta.")
+                    if not _permissao_ok("pw_rd"):
+                        st.error("Seu perfil permite apenas consulta.")
                     else:
                         destino = os.path.join(PASTA_DIARIAS, os.path.basename(up.name))
                         _gravar(destino, up.getvalue(), f"Modelo diário {rd['faixa']} com dados até {rd['corte']:%d/%m/%Y}")
@@ -2150,38 +1820,16 @@ def pagina_atualizar():
                 st.error(f"Não consegui ler a planilha do modelo diário: {ex}")
             up = None
         if up is not None:
-            try:
-                Rn = tv.ler_resultado(up)
-                m = Rn["meta"]
-                fx = Rn["fech"].loc[(tv.FAIXA, "Audiência")] if (tv.FAIXA, "Audiência") in Rn["fech"].index else None
-                st.markdown(f"<div class='leitura'>Dados até <b>{m['corte']:%d/%m/%Y}</b> · projeção de <b>{m['meses_rest']}</b> · "
-                            f"{len(Rn['fech'])} séries · comparação com a rodada de {m.get('anterior', '–')}"
-                            + (f"<br>6h às 24h · audiência: fechamento {br(fx['fech'])}, chance da meta 100% {tv.fmt_p(fx['p100'])}" if fx is not None else "")
-                            + "</div>", unsafe_allow_html=True)
-                destino = os.path.join(PASTA_RODADAS, f"rodada_{m['corte']:%Y-%m-%d}.xlsx")
-                if os.path.exists(destino):
-                    st.markdown(f"<div class='aviso'>Já existe uma rodada com dados até {m['corte']:%d/%m/%Y}: ela será substituída.</div>",
-                                unsafe_allow_html=True)
-                if tem_senha:
-                    st.text_input("Senha", type="password", key="pw_rod")
-                if st.button("Adicionar rodada", type="primary", key="bt_rod"):
-                    if not _senha_ok("pw_rod"):
-                        st.error("Senha incorreta.")
-                    else:
-                        _gravar(destino, up.getvalue(), f"Rodada da projeção com dados até {m['corte']:%d/%m/%Y}")
-                        par = dict(PAR)
-                        par["rodada_ativa"] = None          # volta a usar a mais recente
-                        _salvar_par(par, "Rodada ativa: mais recente")
-                        _recarrega(f"Rodada com dados até {m['corte']:%d/%m/%Y} adicionada e em uso.")
-            except Exception as ex:
-                st.error(f"Não consegui ler a planilha: {ex}")
+            st.markdown("<div class='aviso'>Esta planilha não é do modelo diário (faltam as abas fechamento_e_metas, "
+                        "projecao_mensal e projecao_diaria). O painel mostra só as projeções do modelo diário das faixas; "
+                        "envie a planilha gerada pelo notebook diário da faixa.</div>", unsafe_allow_html=True)
 
     # ---- 2. dados mensais
     with c2, cartao("2 · Enviar dados mensais",
                     "a planilha consolidada do ano (ex.: prog_e_faixa_jan_a_set.xlsx): nome da faixa/programa na 1ª linha, "
                     "AUDIÊNCIA e SHARE na 2ª e o mês à esquerda de cada bloco. Meses revisados pela Kantar substituem os antigos. "
                     "Também aceita a planilha do Instar com a coluna Datas e Rat%/Shr% (uma aba por faixa, ex.: 07h às 24h)."):
-        if banco.ativo():
+        if _banco_ativo():
             st.info("**Dados mensais vindos do banco de dados da empresa**, carregados pela aplicação de carga da TI. "
                     "Aqui ficam só as rodadas da projeção, a rodada exibida e as metas mensais do BI.")
         else:
@@ -2209,11 +1857,9 @@ def pagina_atualizar():
                             st.dataframe(t.rename(columns={"valor_ant": "antes", "valor": "agora"}).style.format(
                                 {"antes": "{:.2f}", "agora": "{:.2f}", "dif": "{:+.2f}"}, decimal=","), hide_index=True,
                                 width="stretch", height=min(40 + 35 * len(t), 240))
-                        if tem_senha:
-                            st.text_input("Senha", type="password", key="pw_mes")
                         if st.button("Aplicar atualização", type="primary", key="bt_mes", disabled=not (len(n) or len(a))):
-                            if not _senha_ok("pw_mes"):
-                                st.error("Senha incorreta.")
+                            if not _permissao_ok("pw_mes"):
+                                st.error("Seu perfil permite apenas consulta.")
                             else:
                                 _salvar_base(m, f"upload {up.name}")
                                 _recarrega(f"Base mensal atualizada: {len(n)} novos, {len(a)} alterados.")
@@ -2222,87 +1868,39 @@ def pagina_atualizar():
 
         # ---- 3. rodadas
 
-    with cartao("3 · Rodadas da projeção", "escolha qual rodada o painel mostra ou exclua uma rodada"):
-        linhas = []
-        for nome in rodadas_disponiveis():
-            nm = os.path.basename(nome)
-            info = RODADAS.get(nm, {})
-            if "erro" in info:
-                linhas.append({"Arquivo": nm, "Dados até": "erro de leitura", "Projeção de": info["erro"][:60], "Séries": "", "Em uso": ""})
-            else:
-                mm = info.get("meta", {})
-                linhas.append({"Arquivo": nm, "Dados até": f"{mm['corte']:%d/%m/%Y}" if mm.get("corte") is not None else "–",
-                               "Projeção de": mm.get("meses_rest", ""), "Séries": len(info.get("fech", [])),
-                               "Em uso": "✔" if nm == ATIVA else ""})
+    with cartao("3 · Rodadas do modelo diário", "o painel mostra a mais recente de cada faixa; as anteriores podem ser escolhidas "
+                "na aba Projeções e metas"):
+        rods_d, erros_d = carregar_diarias(_assinatura_diarias())
+        linhas = [{"Faixa": f, "Dados até": f"{r['corte']:%d/%m/%Y}" if r["corte"] is not None else "–", "Arquivo": r["nome"]}
+                  for f in diario.FAIXAS for r in rods_d.get(f, [])]
+        linhas += [{"Faixa": "erro de leitura", "Dados até": "", "Arquivo": f"{k} ({v[:60]})"} for k, v in erros_d.items()]
         if linhas:
             st.dataframe(pd.DataFrame(linhas), hide_index=True, width="stretch")
-        ops = ["(mais recente, automático)"] + list(_ord)
-        atual = PAR.get("rodada_ativa") if PAR.get("rodada_ativa") in _ord else ops[0]
-        c = st.columns([2, 1, 1])
-        esc = c[0].selectbox("Rodada exibida", ops, index=ops.index(atual), key="rod_esc")
-        if tem_senha:
-            st.text_input("Senha", type="password", key="pw_rodg")
-        if c[1].button("Usar esta rodada", key="bt_rod_usar"):
-            if not _senha_ok("pw_rodg"):
-                st.error("Senha incorreta.")
-            else:
-                par = dict(PAR)
-                par["rodada_ativa"] = None if esc.startswith("(") else esc
-                _salvar_par(par, f"Rodada exibida: {esc}")
-                _recarrega(f"O painel agora mostra: {esc}.")
-        if c[2].button("Excluir esta rodada", key="bt_rod_del", disabled=esc.startswith("(")):
-            if not _senha_ok("pw_rodg"):
-                st.error("Senha incorreta.")
-            else:
-                cam = caminho_rodada(esc)
-                os.remove(cam)
-                if banco.ativo():
-                    banco.excluir("tv_rodadas", nome_arquivo=esc)
+            nomes = [l["Arquivo"] for l in linhas if l["Faixa"] != "erro de leitura"]
+            c = st.columns([2.4, 1])
+            esc = c[0].selectbox("Rodada", nomes, key="rd_del_esc") if nomes else None
+            if esc and c[1].button("Excluir esta rodada", key="bt_rd_del"):
+                if not _permissao_ok("pw_rd_del"):
+                    st.error("Seu perfil permite apenas consulta.")
                 else:
-                    github_apagar(cam.replace(os.sep, "/"), f"Remove a rodada {esc}")
-                if PAR.get("rodada_ativa") == esc:
-                    par = dict(PAR)
-                    par["rodada_ativa"] = None
-                    _salvar_par(par, "Rodada exibida: mais recente")
-                _recarrega(f"Rodada {esc} excluída.")
+                    _excluir_rodada_diaria(esc)
+                    carregar_diarias.clear()
+                    st.session_state["msg_ok"] = f"Rodada {esc} excluída."
+                    st.rerun()
+        else:
+            st.markdown('<div class="vs">Nenhuma rodada do modelo diário ainda.</div>', unsafe_allow_html=True)
 
-    c1, c2 = st.columns(2)
-    # ---- 4. metas mensais do BI
-    with c1, cartao("4 · Metas mensais do BI", "usadas só nos gráficos (os quadrados pretos); as metas anuais vêm da rodada"):
-        regs = [{"série": k, "mês": m, "meta": v} for k, d in PAR.get("metas_mensais_bi", {}).items() for m, v in d.items()]
-        ops_s = [f"{p}|{m}" for p in tv.PROGRAMAS for m in tv.METRICAS]
-        ed = st.data_editor(pd.DataFrame(regs, columns=["série", "mês", "meta"]), num_rows="dynamic", hide_index=True,
-                            width="stretch", key=f"ed_bi_{N}",
-                            column_config={"série": st.column_config.SelectboxColumn("série", options=ops_s, required=True),
-                                           "mês": st.column_config.TextColumn("mês (AAAA-MM)", required=True),
-                                           "meta": st.column_config.NumberColumn("meta 100%", format="%.2f", required=True)})
-        if tem_senha:
-            st.text_input("Senha", type="password", key="pw_bi")
-        if st.button("Salvar metas mensais", key="bt_bi"):
-            if not _senha_ok("pw_bi"):
-                st.error("Senha incorreta.")
-            else:
-                novo = {}
-                for _, r in ed.dropna().iterrows():
-                    novo.setdefault(r["série"], {})[str(r["mês"])[:7]] = float(r["meta"])
-                par = dict(PAR)
-                par["metas_mensais_bi"] = novo
-                _salvar_par(par, "Metas mensais do BI")
-                _recarrega("Metas mensais salvas.")
-
-    # ---- 5. versões anteriores
-    with c2, cartao("5 · Versões anteriores da base mensal", "cada atualização guarda uma cópia da base anterior"):
+    # ---- 4. versões anteriores
+    with cartao("4 · Versões anteriores da base mensal", "cada atualização guarda uma cópia da base anterior"):
         bks = sorted(glob.glob(os.path.join("backups", "tv_mensal_*.csv")), reverse=True)
         if not bks:
             st.markdown('<div class="vs">Nenhuma versão anterior ainda.</div>', unsafe_allow_html=True)
         else:
             rot = lambda b: datetime.strptime(os.path.basename(b)[10:25], "%Y%m%d_%H%M%S").strftime("%d/%m/%Y %H:%M:%S")  # noqa: E731
             b = st.selectbox("Versão", bks, format_func=rot, key="bk_sel")
-            if tem_senha:
-                st.text_input("Senha", type="password", key="pw_bk")
             if st.button("Restaurar esta versão", key="bt_bk"):
-                if not _senha_ok("pw_bk"):
-                    st.error("Senha incorreta.")
+                if not _permissao_ok("pw_bk"):
+                    st.error("Seu perfil permite apenas consulta.")
                 else:
                     _salvar_base(tv.ler_base(b), f"restaurada a versão de {rot(b)}")
                     _recarrega(f"Versão de {rot(b)} restaurada.")
@@ -2369,7 +1967,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "29/10/2026 · versão final · faixas 6h e 7h · modelo diário"
+VERSAO_PAINEL = "04/11/2026 · Labs · projeções pelo modelo diário"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
@@ -2401,28 +1999,30 @@ A faixa é a **6h às 24h**; os programas usam a média dos dias em que vão ao 
 (no histórico, a diferença para a linha "ANO" oficial fica em centésimos).
 
 **Chance da meta**: parcela dos cenários simulados em que o fechamento do ano fica na meta ou acima.
-Semáforo da meta 100%: **provável** ≥ 80% · **indefinido** 20–80% · **improvável** < 20%.
+Semáforo da meta 100%: **muito provável** ≥ 90% · **provável** 66–90% · **indefinido** 33–66% · **improvável** 10–33% ·
+**muito improvável** < 10%.
 
-**Média necessária**: média que os meses que faltam precisam ter para o ano fechar exatamente na meta 100%.
+**Média necessária**: média que os dias que faltam precisam ter para o ano fechar exatamente na meta 100%.
 Se ela está dentro da faixa da projeção, a meta está em jogo.
 """)
     with cartao("Como a projeção é feita"):
         st.markdown("""
-A projeção vem do notebook da rodada (o painel lê a planilha de resultado que ele exporta):
+A projeção vem do notebook diário de cada faixa (o painel lê a planilha de resultado que ele exporta):
 
-1. **Dados**: série mensal desde 2020; o acumulado do ano é ancorado no oficial e completado com os dias que faltam até o corte.
-2. **Janela**: a modelagem usa os meses depois da quebra estrutural de 2022 (teste QLR).
-3. **Efeitos**: sazonalidade, Copa do Mundo, horário eleitoral e mudanças de patamar ("degraus") de cada programa.
-4. **Modelo**: Combinação de 4 modelos (média de 12 meses, Holt-Winters, nível local e AR(1) com eventos).
-5. **Validação**: 24 reprojeções do passado (origem móvel); nos programas com degrau, ele é reestimado em cada origem.
-6. **Probabilidade**: 200 mil cenários com os erros reais da validação (t multivariada), que viram o fechamento do ano e a chance de cada meta.
+1. **Dados**: audiência e share **diários** de cada faixa (6h às 24h e 7h às 24h), do Instar; o ano é fechado somando os
+   dias já realizados com a projeção dos dias que faltam.
+2. **Modelo diário**: regressão dinâmica dia a dia, com dia da semana, feriados, jogos, horário eleitoral e Copa do Mundo.
+3. **Combinação**: a projeção de cada mês combina o modelo diário com um modelo mensal da própria faixa (média dos dois).
+4. **Validação**: reprojeções do passado com corte no mesmo dia do mês; o erro médio de cada horizonte aparece na aba.
+5. **Probabilidade**: simulação de cenários que vira o fechamento do ano, as faixas de 80% e 95% e a chance de cada meta
+   (75%, 100% e 120%), com o semáforo de cinco níveis.
 
-**Sensibilidade**: refaz a chance da meta 100% mudando uma hipótese de cada vez (correção de viés, sem efeito eleitoral,
-incerteza do degrau, só o melhor modelo, menos exibições). Quando uma hipótese muda a cor do semáforo, a leitura daquela série é frágil.
+Cada faixa tem o seu notebook (`notebooks/Projecao_2026_6h24h_diario.ipynb` e `…7h24h…`); o painel mostra a rodada mais
+recente da faixa escolhida no seletor acima das abas.
 """)
     with cartao("Atualização"):
         st.markdown("""
-- **Nova rodada**: rode o notebook e envie a planilha `resultado_projecao_*.xlsx` em **⚙ Atualizar dados**, no rodapé da página. O painel passa a mostrar a rodada mais recente e guarda as anteriores.
+- **Nova rodada**: rode o notebook diário da faixa e envie a planilha `projecao_2026_6h24h_diario_AAAAMMDD.xlsx` (ou `…7h24h…`) em **⚙ Atualizar dados**, no rodapé da página. O painel passa a mostrar a rodada mais recente de cada faixa e guarda as anteriores.
 - **Dados mensais**: envie a planilha consolidada do ano. Meses novos entram na base; meses revisados substituem os antigos (e a versão anterior fica guardada).
-- Para que os envios fiquem salvos entre reinícios do app, configure o bloco `[github]` em Settings → Secrets (ver `secrets_exemplo.toml`).
+- Tudo o que é enviado aqui fica gravado no banco de dados do painel e registrado na auditoria.
 """)
