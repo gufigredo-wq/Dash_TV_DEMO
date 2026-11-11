@@ -45,6 +45,11 @@ TABELAS = {
     "tv_rodadas": {
         "colunas": {"nome_arquivo": "texto(120)", "corte": "data", "conteudo": "binário", "atualizado_em": "data e hora"},
         "chave": ["nome_arquivo"]},
+    # concorrência de TV: audiência e share de cada emissora por mês e recorte (faixa ou horário de um programa local)
+    "tv_concorrencia": {
+        "colunas": {"mes": "data", "recorte": "texto(60)", "emissora": "texto(60)", "rat": "número", "shr": "número",
+                    "origem": "texto(200)", "atualizado_em": "data e hora"},
+        "chave": ["mes", "recorte", "emissora"]},
     # parâmetros editados nos painéis (números oficiais, previsão do BI, metas mensais, bancos excluídos, rodada ativa)
     "painel_parametros": {
         "colunas": {"painel": "texto(10)", "chave": "texto(60)", "valor": "texto longo (JSON)", "atualizado_em": "data e hora"},
