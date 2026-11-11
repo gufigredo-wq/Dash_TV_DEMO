@@ -2728,10 +2728,11 @@ def _config_ia():
         except Exception:                 # sem arquivo de secrets
             v = None
         return v or os.environ.get(nome)
-    return ler("GEMINI_API_KEY"), ler("GEMINI_MODELO") or chat.MODELO_PADRAO
+    return (ler("GEMINI_API_KEY"), ler("GEMINI_MODELO") or chat.MODELO_PADRAO,
+            ler("GEMINI_MODELO_RESERVA") or chat.MODELO_RESERVA)
 
 
-CHAT_CHAVE, CHAT_MODELO = _config_ia()
+CHAT_CHAVE, CHAT_MODELO, CHAT_RESERVA = _config_ia()
 CHAT_LIMITE = 30                          # perguntas à IA por sessão (controle de custo)
 
 
@@ -2779,10 +2780,11 @@ def _chat_responde(txt):
     if CHAT_CHAVE and usadas < CHAT_LIMITE:
         historico = [(m["q"], m["t"]) for m in msgs[1:-1] if m.get("modo") != "erro"]
         try:
-            resp, consultas = chat.perguntar_ia(txt, _chat_fonte(), CHAT_CHAVE, CHAT_MODELO, historico)
+            resp, consultas, usado = chat.perguntar_ia(txt, _chat_fonte(), CHAT_CHAVE, CHAT_MODELO, historico,
+                                                        reserva=CHAT_RESERVA)
             st.session_state["chat_usadas"] = usadas + 1
-            registra("assistente.pergunta", recurso_tipo="assistente", detalhe=f"{len(consultas)} consultas")
-            return {"q": "bot", "t": resp, "consultas": consultas, "modo": "ia"}
+            registra("assistente.pergunta", recurso_tipo="assistente", detalhe=f"{len(consultas)} consultas · {usado}")
+            return {"q": "bot", "t": resp, "consultas": consultas, "modo": "ia", "modelo": usado}
         except Exception as ex:           # API fora, chave errada, limite do plano…: cai nas respostas prontas
             aviso = f"*(A IA não respondeu agora: {ex.__class__.__name__}. Resposta automática:)*\n"
             return {"q": "bot", "t": aviso + chat.responder(txt, BASE, R), "modo": "erro"}
@@ -2795,9 +2797,13 @@ def _chat_responde(txt):
 
 def _bolha(m):
     corpo = chat.para_html(m["t"])
-    if m.get("consultas"):
-        itens = "".join(f"<li>{html_escape(chat.descreve_consulta(c))}</li>" for c in m["consultas"])
-        corpo += f'<details class="como"><summary>Como cheguei nisso</summary><ul>{itens}</ul></details>'
+    if m.get("modo") == "ia":
+        itens = "".join(f"<li>{html_escape(chat.descreve_consulta(c))}</li>" for c in m.get("consultas") or []) or \
+            "<li>nenhuma consulta: resposta sem números do painel</li>"
+        reserva = m.get("modelo") and m.get("modelo") != CHAT_MODELO
+        modelo = f'<li class="mod">respondido por {html_escape(m.get("modelo") or CHAT_MODELO)}' + \
+                 (" (reserva: o principal estava indisponível)" if reserva else "") + "</li>"
+        corpo += f'<details class="como"><summary>Como cheguei nisso</summary><ul>{itens}{modelo}</ul></details>'
     return f'<div class="msg {m["q"]}">{corpo}</div>'
 
 
