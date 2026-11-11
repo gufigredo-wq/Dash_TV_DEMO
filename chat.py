@@ -1,7 +1,10 @@
-"""Assistente do painel de TV · fase 1: respostas PRONTAS, calculadas com os dados do próprio painel (sem IA).
+"""Assistente do painel de TV.
 
-A interface (streamlit_app.py) só chama `responder(texto, base, rodada)`. Na fase 2, essa mesma função passa a chamar o
-LLM (Gemini) com as consultas como ferramentas; a interface não muda.
+Dois modos, com a mesma interface (streamlit_app.py):
+• IA (Gemini): `perguntar_ia(...)`. O modelo interpreta a pergunta e chama FERRAMENTAS de consulta; quem executa as
+  consultas é o painel, nos dados internos (banco). O modelo recebe só o resultado de cada consulta, nunca a base inteira,
+  e escreve a resposta com os números e uma leitura (insights). Chave em GEMINI_API_KEY (Secrets ou variável de ambiente).
+• Respostas prontas: `responder(...)`, sem IA. É o que roda sem chave ou se a IA falhar.
 """
 import html
 import re
@@ -59,9 +62,21 @@ def para_html(md):
     t = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])", r"<i>\1</i>", t)
     linhas = []
     for l in t.split("\n"):
-        linhas.append(f'<span class="it">{l[2:]}</span>' if l.startswith("• ") else
-                      f'<span class="sub">{l[2:]}</span>' if l.startswith("  ") else l)
-    return "<br>".join(linhas).replace("</span><br>", "</span>")
+        m = re.match(r"^(\s*)(?:[•\-*]|\d+[.)])\s+(.*)$", l)
+        if re.match(r"^#{1,6}\s+", l):
+            linhas.append(f'<b class="tt">{re.sub(r"^#{1,6}\s+", "", l)}</b>')
+        elif m and not l.startswith("**"):
+            num = re.match(r"^\s*(\d+[.)])", l)
+            cls = "sub" if len(m[1]) >= 2 else "it"
+            linhas.append(f'<span class="{cls}">{(num[1] + " ") if num else ""}{m[2]}</span>')
+        elif l.startswith("  ") and l.strip():
+            linhas.append(f'<span class="sub">{l.strip()}</span>')
+        else:
+            linhas.append(l)
+    out = "<br>".join(linhas)
+    for tag in ("</span>", "</b>"):
+        out = out.replace(tag + "<br>", tag)
+    return re.sub(r"(<br>){3,}", "<br><br>", out).strip()
 
 
 # ---------------------------------------------------------------------------------------------- consultas
@@ -251,3 +266,318 @@ def responder(texto, base, rodada=None):
     if re.search(r"\b(obrigad\w*|valeu|show|otimo|perfeito)\b", t):
         return "Por nada! Se precisar de mais alguma coisa, é só perguntar."
     return NAO_SEI
+
+
+# =====================================================================================================================
+# MODO IA (Gemini) · ferramentas de consulta executadas pelo painel nos dados internos
+# =====================================================================================================================
+MODELO_PADRAO = "gemini-3.5-flash"
+MAX_PASSOS = 6                     # consultas encadeadas por pergunta
+MAX_LINHAS = 80                    # linhas devolvidas por consulta (o resto é resumido)
+HISTORICO = 8                      # mensagens anteriores enviadas como contexto
+
+
+class Fonte:
+    """Os dados que as ferramentas consultam: base mensal, rodada mensal dos programas e rodadas diárias das faixas."""
+
+    def __init__(self, base, rodada=None, diarias=None, demo=False):
+        self.base = base.copy()
+        self.base["mes"] = pd.to_datetime(self.base["mes"])
+        self.rodada = rodada
+        self.diarias = diarias or {}           # {faixa: [rodada mais recente primeiro, ...]} (diario.carregar_rodadas)
+        self.demo = demo
+
+    def series(self):
+        return list(self.base["programa"].drop_duplicates())
+
+
+def _r(v, casas=2):
+    try:
+        return None if v is None or pd.isna(v) else round(float(v), casas)
+    except (TypeError, ValueError):
+        return str(v)
+
+
+def _mes_txt(d):
+    return f"{d:%Y-%m}"
+
+
+def _periodo(txt, padrao):
+    if not txt:
+        return padrao
+    try:
+        return pd.Timestamp(str(txt)[:7] + "-01")
+    except Exception:
+        return padrao
+
+
+def _resolve(nomes, fonte):
+    """Nomes vindos do modelo (com ou sem acento, apelidos) -> nomes da base."""
+    if not nomes:
+        return []
+    if isinstance(nomes, str):
+        nomes = [nomes]
+    validos = fonte.series()
+    out = []
+    for n in nomes:
+        alvo = _acha_programa(norm(n), fonte.base) or next((v for v in validos if norm(v) == norm(n)), None)
+        if alvo and alvo not in out:
+            out.append(alvo)
+    return out
+
+
+def _metricas(m):
+    return ["Audiência", "Share"] if not m or m == "ambas" else [m]
+
+
+def f_serie_mensal(fonte, series=None, metrica="ambas", inicio=None, fim=None, agregar="mes"):
+    progs = _resolve(series, fonte) or [FAIXA]
+    b = fonte.base
+    fim_ = _periodo(fim, b["mes"].max())
+    ini_ = _periodo(inicio, fim_ - pd.DateOffset(months=11))
+    d = b[b["programa"].isin(progs) & b["metrica"].isin(_metricas(metrica)) & b["mes"].between(ini_, fim_)]
+    if agregar == "ano":
+        d = d.assign(ano=d["mes"].dt.year).groupby(["programa", "metrica", "ano"], as_index=False).agg(
+            media=("valor", "mean"), meses=("valor", "size"))
+        linhas = [{"serie": r.programa, "metrica": r.metrica, "ano": int(r.ano), "media_simples_dos_meses": _r(r.media),
+                   "meses_com_dado": int(r.meses)} for r in d.itertuples()]
+    else:
+        d = d.sort_values(["programa", "metrica", "mes"])
+        linhas = [{"serie": r.programa, "metrica": r.metrica, "mes": _mes_txt(r.mes), "valor": _r(r.valor)} for r in d.itertuples()]
+    return {"series": progs, "periodo": f"{_mes_txt(ini_)} a {_mes_txt(fim_)}", "linhas": linhas}
+
+
+def f_ranking(fonte, metrica="Audiência", criterio="valor", mes=None, ordem="desc", limite=10, incluir_faixas=False):
+    b = fonte.base
+    met = metrica if metrica in ("Audiência", "Share") else "Audiência"
+    alvo = _periodo(mes, None)
+    linhas = []
+    for p in fonte.series():
+        if p in (FAIXA, FAIXA_7) and not incluir_faixas:
+            continue
+        s = _serie(b, p, met)
+        if s.empty:
+            continue
+        m = alvo if alvo is not None and alvo in s.index else s.index.max()
+        v = s[m]
+        dm = s.get(m - pd.DateOffset(months=1))
+        da = s.get(m - pd.DateOffset(years=1))
+        ano = s[(s.index.year == m.year) & (s.index <= m)].mean()
+        linhas.append({"serie": p, "mes": _mes_txt(m), "valor": _r(v), "var_mes_anterior": _r(None if dm is None else v - dm),
+                       "var_ano_anterior": _r(None if da is None else v - da), "media_ano_ate_o_mes": _r(ano)})
+    chave = {"valor": "valor", "var_mes_anterior": "var_mes_anterior", "var_ano_anterior": "var_ano_anterior",
+             "media_ano": "media_ano_ate_o_mes"}.get(criterio, "valor")
+    linhas = [l for l in linhas if l[chave] is not None]
+    linhas.sort(key=lambda l: l[chave], reverse=(ordem != "asc"))
+    return {"metrica": met, "criterio": chave, "linhas": linhas[:max(1, min(int(limite or 10), 30))]}
+
+
+def f_projecao_programas(fonte, programas=None, metrica="ambas"):
+    R = fonte.rodada
+    if not R or "fech" not in R:
+        return {"erro": "nenhuma rodada de projeção dos programas carregada"}
+    F = R["fech"]
+    progs = _resolve(programas, fonte) or [p for p in F.index.get_level_values(0).unique() if p not in (FAIXA, FAIXA_7)]
+    linhas = []
+    for p in progs:
+        for m in _metricas(metrica):
+            try:
+                x = F.loc[(p, m)]
+            except KeyError:
+                continue
+            linhas.append({"programa": p, "metrica": m, "acumulado_ate_corte": _r(x.get("acum")),
+                           "fechamento_projetado": _r(x.get("fech")), "faixa80": [_r(x.get("ic_inf")), _r(x.get("ic_sup"))],
+                           "media_projetada_meses_restantes": _r(x.get("proj_rest")),
+                           "meta75": _r(x.get("meta75")), "chance_meta75": _r(x.get("p75"), 4),
+                           "meta100": _r(x.get("meta100")), "chance_meta100": _r(x.get("p100"), 4),
+                           "media_necessaria_meta100": _r(x.get("nec100")),
+                           "meta120": _r(x.get("meta120")), "chance_meta120": _r(x.get("p120"), 4),
+                           "semaforo_meta100": x.get("semaforo"), "erro_medio_historico": _r(x.get("mae"))})
+    meta = R.get("meta", {})
+    return {"modelo": "mensal (programas)", "dados_ate": f"{meta['corte']:%Y-%m-%d}" if meta.get("corte") is not None else None,
+            "meses_restantes": meta.get("meses_rest"), "ano": meta.get("ano"), "linhas": linhas}
+
+
+def f_projecao_faixa(fonte, faixa=FAIXA, incluir_meses=True):
+    fx = _resolve(faixa, fonte)
+    fx = fx[0] if fx and fx[0] in (FAIXA, FAIXA_7) else FAIXA
+    lista = fonte.diarias.get(fx) or []
+    if not lista:
+        return {"faixa": fx, "erro": "nenhuma rodada do modelo diário carregada para esta faixa"}
+    r = lista[0]
+    linhas = []
+    for m, x in r["res"].iterrows():
+        linhas.append({"metrica": m, "fechamento_projetado": _r(x.get("fechamento")),
+                       "faixa80": [_r(x.get("IC80 inf")), _r(x.get("IC80 sup"))],
+                       "meta75": _r(x.get("meta 75%")), "chance_meta75": _r(x.get("P(75%)"), 4),
+                       "meta100": _r(x.get("meta 100%")), "chance_meta100": _r(x.get("P(100%)"), 4),
+                       "meta120": _r(x.get("meta 120%")), "chance_meta120": _r(x.get("P(120%)"), 4),
+                       "media_necessaria_dias_restantes": _r(x.get("média nec. 100% (dias restantes)")),
+                       "media_projetada_dias_restantes": _r(x.get("média proj. (dias restantes)")),
+                       "semaforo_meta100": x.get("semáforo 100%")})
+    out = {"faixa": fx, "modelo": "diário", "dados_ate": f"{r['corte']:%Y-%m-%d}" if r.get("corte") is not None else None,
+           "linhas": linhas}
+    if incluir_meses and r.get("mensal") is not None:
+        out["meses_projetados"] = [{"metrica": x["métrica"], "mes": _mes_txt(x["mes"]), "projecao": _r(x["projeção"]),
+                                    "faixa80": [_r(x.get("IC80 inf")), _r(x.get("IC80 sup"))]}
+                                   for _, x in r["mensal"].dropna(subset=["mes"]).iterrows()]
+    return out
+
+
+def f_comparar_periodos(fonte, series=None, metrica="ambas", a_inicio=None, a_fim=None, b_inicio=None, b_fim=None):
+    progs = _resolve(series, fonte) or [FAIXA]
+    b = fonte.base
+    ult = b["mes"].max()
+    pa = (_periodo(a_inicio, pd.Timestamp(ult.year, 1, 1)), _periodo(a_fim, ult))
+    pb = (_periodo(b_inicio, pa[0] - pd.DateOffset(years=1)), _periodo(b_fim, pa[1] - pd.DateOffset(years=1)))
+    linhas = []
+    for p in progs:
+        for m in _metricas(metrica):
+            s = _serie(b, p, m)
+            va, vb = s[(s.index >= pa[0]) & (s.index <= pa[1])], s[(s.index >= pb[0]) & (s.index <= pb[1])]
+            linhas.append({"serie": p, "metrica": m, "media_a": _r(va.mean() if len(va) else None), "meses_a": len(va),
+                           "media_b": _r(vb.mean() if len(vb) else None), "meses_b": len(vb),
+                           "diferenca_a_menos_b": _r(va.mean() - vb.mean() if len(va) and len(vb) else None)})
+    return {"periodo_a": f"{_mes_txt(pa[0])} a {_mes_txt(pa[1])}", "periodo_b": f"{_mes_txt(pb[0])} a {_mes_txt(pb[1])}",
+            "observacao": "médias simples dos meses", "linhas": linhas}
+
+
+_SERIES_TXT = "Nome da faixa ou do programa, como aparece no catálogo (ex.: 'BATV', '6h às 24h')."
+FERRAMENTAS = {
+    "serie_mensal": (f_serie_mensal, "Valores mensais (realizados) de audiência e/ou share de faixas e programas num período. "
+                     "Use agregar='ano' para médias por ano.", {
+        "series": {"type": "array", "items": {"type": "string"}, "description": _SERIES_TXT},
+        "metrica": {"type": "string", "enum": ["Audiência", "Share", "ambas"]},
+        "inicio": {"type": "string", "description": "Mês inicial AAAA-MM (padrão: 11 meses antes do fim)."},
+        "fim": {"type": "string", "description": "Mês final AAAA-MM (padrão: último mês com dado)."},
+        "agregar": {"type": "string", "enum": ["mes", "ano"]}}, ["series"]),
+    "ranking": (f_ranking, "Ordena os programas de um mês por valor, variação vs mês anterior, variação vs mesmo mês do ano "
+                "anterior ou média do ano até o mês.", {
+        "metrica": {"type": "string", "enum": ["Audiência", "Share"]},
+        "criterio": {"type": "string", "enum": ["valor", "var_mes_anterior", "var_ano_anterior", "media_ano"]},
+        "mes": {"type": "string", "description": "Mês AAAA-MM (padrão: último mês de cada programa)."},
+        "ordem": {"type": "string", "enum": ["desc", "asc"]},
+        "limite": {"type": "integer"},
+        "incluir_faixas": {"type": "boolean"}}, ["metrica", "criterio"]),
+    "projecao_programas": (f_projecao_programas, "Projeção do ano dos PROGRAMAS (modelo mensal): fechamento projetado, faixa "
+                           "de 80%, metas 75/100/120%, chance de cada meta, média necessária e semáforo.", {
+        "programas": {"type": "array", "items": {"type": "string"}, "description": "Vazio = todos os programas."},
+        "metrica": {"type": "string", "enum": ["Audiência", "Share", "ambas"]}}, []),
+    "projecao_faixa": (f_projecao_faixa, "Projeção do ano das FAIXAS 6h às 24h ou 7h às 24h (modelo diário): fechamento, metas, "
+                       "chances, média necessária nos dias restantes e projeção dos meses que faltam.", {
+        "faixa": {"type": "string", "enum": [FAIXA, FAIXA_7]},
+        "incluir_meses": {"type": "boolean"}}, ["faixa"]),
+    "comparar_periodos": (f_comparar_periodos, "Compara a média de dois períodos (padrão: o ano até o último mês vs o mesmo "
+                          "período do ano anterior).", {
+        "series": {"type": "array", "items": {"type": "string"}, "description": _SERIES_TXT},
+        "metrica": {"type": "string", "enum": ["Audiência", "Share", "ambas"]},
+        "a_inicio": {"type": "string", "description": "AAAA-MM"}, "a_fim": {"type": "string", "description": "AAAA-MM"},
+        "b_inicio": {"type": "string", "description": "AAAA-MM"}, "b_fim": {"type": "string", "description": "AAAA-MM"}},
+        ["series"]),
+}
+
+
+def executar(nome, args, fonte):
+    """Roda uma ferramenta com os argumentos do modelo. Nunca levanta exceção: erros voltam como {'erro': ...}."""
+    if nome not in FERRAMENTAS:
+        return {"erro": f"ferramenta desconhecida: {nome}"}
+    func, _, props, _ = FERRAMENTAS[nome]
+    limpos = {k: v for k, v in (args or {}).items() if k in props}
+    try:
+        out = func(fonte, **limpos)
+    except Exception as ex:
+        return {"erro": f"falha na consulta ({ex.__class__.__name__})"}
+    if isinstance(out.get("linhas"), list) and len(out["linhas"]) > MAX_LINHAS:
+        n = len(out["linhas"])
+        out["linhas"] = out["linhas"][:MAX_LINHAS]
+        out["aviso"] = f"mostrando {MAX_LINHAS} de {n} linhas; refine o período ou as séries"
+    return out
+
+
+def instrucoes(fonte):
+    b = fonte.base
+    ini, fim = (b["mes"].min(), b["mes"].max()) if len(b) else (None, None)
+    R = fonte.rodada or {}
+    corte = R.get("meta", {}).get("corte")
+    diar = {fx: f"{l[0]['corte']:%d/%m/%Y}" for fx, l in fonte.diarias.items() if l and l[0].get("corte") is not None}
+    from_dias = ", ".join(f"{p}" for p in fonte.series())
+    return f"""Você é o assistente do Painel de Audiência de TV da Rede Bahia (TV Bahia, afiliada Globo).
+Responda em português do Brasil, de forma curta e direta, para analistas de pesquisa, jornalismo e comercial.
+
+DADOS (consulte SEMPRE pelas ferramentas; nunca invente números):
+- Audiência (Rat%) e share (Shr%) mensais da TV Bahia, TT Domicílios, Grande Salvador, Kantar IBOPE (Instar).
+- Séries disponíveis: {from_dias}.
+- "6h às 24h" e "7h às 24h" são as FAIXAS (a emissora no dia todo); os demais são programas locais.
+- Meses com dado: {_mes_txt(ini) if ini is not None else '–'} a {_mes_txt(fim) if fim is not None else '–'}.
+- Projeção dos programas (modelo mensal): dados até {f"{corte:%d/%m/%Y}" if corte is not None else 'sem rodada'}.
+- Projeção das faixas (modelo diário): {diar or 'sem rodada'}.
+{"- ATENÇÃO: estes são DADOS FICTÍCIOS de demonstração." if fonte.demo else ""}
+
+CONCEITOS: audiência = % dos domicílios com TV sintonizada na TV Bahia; share = fatia da TV Bahia entre os domicílios com
+TV ligada. Variações de audiência em pontos (pt); de share em pontos percentuais (p.p.). A chance da meta é a parcela dos
+cenários simulados em que o ano fecha na meta ou acima. Semáforo da meta 100%: provável, indefinido, improvável
+(faixas também têm "muito provável" e "muito improvável").
+
+COMO RESPONDER:
+1. Use as ferramentas para buscar exatamente o que a pergunta pede (pode chamar mais de uma).
+2. Comece pela resposta, com os números principais (formato brasileiro: 14,20; 36,7%; mês como set/26).
+3. Depois, em 1 a 3 itens curtos, uma LEITURA com insights apoiados nos dados: tendência, comparação com o ano anterior,
+   o que falta para a meta, riscos. Não especule causas que os dados não mostram; se sugerir uma hipótese, diga que é hipótese.
+4. Sem tabelas e sem títulos grandes (o quadro é estreito); use itens com "- " e **negrito** nos números-chave.
+5. Se o dado não existe nas ferramentas, diga que o painel não tem essa informação.
+6. Fora do tema audiência/painel, recuse em uma frase e diga o que você consegue responder."""
+
+
+def _declaracoes():
+    from google.genai import types
+    return [types.Tool(function_declarations=[
+        types.FunctionDeclaration(name=n, description=d, parameters_json_schema={"type": "object", "properties": p, "required": r})
+        for n, (_, d, p, r) in FERRAMENTAS.items()])]
+
+
+def _texto(resp):
+    partes = []
+    for c in (resp.candidates or [])[:1]:
+        for pt in (c.content.parts if c.content and c.content.parts else []):
+            if getattr(pt, "text", None) and not getattr(pt, "thought", False):
+                partes.append(pt.text)
+    return "".join(partes).strip()
+
+
+def perguntar_ia(pergunta, fonte, chave, modelo=None, historico=(), cliente=None):
+    """Pergunta -> (resposta em markdown, consultas feitas [{'ferramenta', 'args'}]). Levanta exceção se a API falhar."""
+    from google import genai
+    from google.genai import types
+    cli = cliente or genai.Client(api_key=chave)
+    conteudos = [types.Content(role="user" if q == "eu" else "model", parts=[types.Part(text=t)])
+                 for q, t in list(historico)[-HISTORICO:] if t]
+    conteudos.append(types.Content(role="user", parts=[types.Part(text=pergunta)]))
+    cfg = types.GenerateContentConfig(system_instruction=instrucoes(fonte), tools=_declaracoes(),
+                                      automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True))
+    consultas = []
+    for _ in range(MAX_PASSOS):
+        resp = cli.models.generate_content(model=modelo or MODELO_PADRAO, contents=conteudos, config=cfg)
+        chamadas = resp.function_calls or []
+        if not chamadas:
+            txt = _texto(resp)
+            return (txt or "Não consegui formular uma resposta. Tente perguntar de outro jeito."), consultas
+        conteudos.append(resp.candidates[0].content)        # mantém a vez do modelo como veio (inclui assinaturas)
+        partes = []
+        for ch in chamadas:
+            args = dict(ch.args or {})
+            consultas.append({"ferramenta": ch.name, "args": args})
+            partes.append(types.Part.from_function_response(name=ch.name, response=executar(ch.name, args, fonte)))
+        conteudos.append(types.Content(role="user", parts=partes))
+    # passou do limite de consultas: pede a resposta final sem ferramentas
+    cfg_final = types.GenerateContentConfig(system_instruction=instrucoes(fonte))
+    resp = cli.models.generate_content(model=modelo or MODELO_PADRAO, contents=conteudos, config=cfg_final)
+    return (_texto(resp) or "A pergunta exigiu consultas demais. Tente algo mais específico."), consultas
+
+
+def descreve_consulta(c):
+    """Texto curto de uma consulta, para o item 'Como cheguei nisso'."""
+    nomes = {"serie_mensal": "Série mensal", "ranking": "Ranking", "projecao_programas": "Projeção dos programas",
+             "projecao_faixa": "Projeção da faixa", "comparar_periodos": "Comparação de períodos"}
+    a = c.get("args") or {}
+    det = " · ".join(f"{k}: {', '.join(map(str, v)) if isinstance(v, list) else v}" for k, v in a.items() if v not in (None, "", []))
+    return f"{nomes.get(c.get('ferramenta'), c.get('ferramenta'))}" + (f" ({det})" if det else "")
