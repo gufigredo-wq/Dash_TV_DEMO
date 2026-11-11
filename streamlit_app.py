@@ -21,6 +21,7 @@ for _k, _v in {"theme.base": "light", "theme.primaryColor": "#2a78d6", "theme.ba
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 import tv  # noqa: E402
 import diario  # noqa: E402
+import chat  # noqa: E402  (assistente do painel: fase 1, respostas prontas)
 import banco  # noqa: E402  (banco de dados da empresa, opcional: sem conexão configurada, lê os arquivos de dados/)
 
 
@@ -2644,3 +2645,112 @@ e 200 mil cenários para a chance de cada meta. Semáforo dos programas: **prov�
 - **Dados mensais**: envie a planilha consolidada do ano. Meses novos entram na base; meses revisados substituem os antigos (e a versão anterior fica guardada).
 - Tudo o que é enviado aqui fica gravado no banco de dados do painel e registrado na auditoria.
 """)
+
+
+# =================================================================================== ASSISTENTE (mini chat lateral)
+# Fase 1: respostas prontas, calculadas com os dados do painel (chat.py), sem IA. A aba com a seta fica na borda
+# esquerda da tela; o quadro desliza ao abrir e fechar. Tudo roda num fragmento: conversar não recarrega o painel.
+_CHAT_CSS = """
+<style>
+.st-key-chat_aba {position:fixed !important; left:0; top:44vh; z-index:1000300; width:auto !important;
+    transition:left .45s cubic-bezier(.2,.8,.2,1);}
+.st-key-chat_aba [data-testid="stElementContainer"]:has(.chat-aberto) {display:none;}
+.st-key-chat_aba button {width:34px; min-width:34px; height:48px; min-height:0; padding:0; border-radius:0 12px 12px 0;
+    border:1px solid rgba(255,255,255,.18); border-left:none; color:#fff !important;
+    background:linear-gradient(160deg, #2a78d6, #7b5cff); box-shadow:0 4px 16px rgba(42,120,214,.45);
+    animation:chamar 4s ease-in-out infinite;}
+.st-key-chat_aba button p {font-size:22px; font-weight:700; line-height:1; margin:0;}
+.st-key-chat_aba button:hover {filter:brightness(1.12); width:40px;}
+@keyframes chamar {{ 0%,100% {{box-shadow:0 4px 16px rgba(42,120,214,.45);}} 50% {{box-shadow:0 4px 26px rgba(123,92,255,.75);}} }}
+.stApp:has(.chat-aberto) .st-key-chat_aba {left:min(384px, 94vw);}
+.stApp:has(.chat-aberto) .st-key-chat_aba button {animation:none;}
+
+.st-key-chat_painel {position:fixed !important; left:12px; top:92px; bottom:16px; z-index:1000250;
+    width:min(372px, calc(94vw - 12px)) !important; padding:14px 14px 10px; border-radius:16px; gap:8px !important;
+    background:__FUNDO__; border:1px solid __BORDA__; box-shadow:0 18px 50px rgba(0,0,0,.45);
+    transform:translateX(calc(-100% - 40px)); visibility:hidden;
+    transition:transform .45s cubic-bezier(.2,.8,.2,1), visibility 0s linear .45s;}
+.stApp:has(.chat-aberto) .st-key-chat_painel {transform:none; visibility:visible;
+    transition:transform .45s cubic-bezier(.2,.8,.2,1), visibility 0s;}
+.st-key-chat_painel .chat-cab {display:flex; align-items:center; gap:10px; padding-bottom:8px; border-bottom:1px solid __BORDA__;}
+.st-key-chat_painel .chat-ico {width:30px; height:30px; border-radius:9px; display:grid; place-items:center; font-size:16px;
+    background:linear-gradient(160deg, #2a78d6, #7b5cff); color:#fff;}
+.st-key-chat_painel .chat-tit {font-weight:700; font-size:.92rem; color:__TEXTO__;}
+.st-key-chat_painel .chat-sub {font-size:.7rem; color:__SUAVE__;}
+.st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) {flex:1 1 0; min-height:0;}
+.st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) [data-testid="stMarkdown"],
+.st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) [data-testid="stMarkdownContainer"] {height:100%;}
+.st-key-chat_painel .chat-msgs {height:100%; overflow-y:auto; padding:4px 2px; display:flex; flex-direction:column-reverse; gap:8px;}
+.st-key-chat_sug {width:100% !important; max-width:100%; min-width:0;}
+.st-key-chat_sug [data-testid="stButtonGroup"] {width:100%; min-width:0;}
+.st-key-chat_sug div:has(> button) {flex-wrap:nowrap !important; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin;}
+.st-key-chat_sug button {flex:0 0 auto; white-space:nowrap;}
+.st-key-chat_painel .msg {max-width:88%; padding:8px 11px; border-radius:12px; font-size:.8rem; line-height:1.45;
+    animation:pop .25s ease-out both;}
+.st-key-chat_painel .msg.bot {align-self:flex-start; background:__BOLHA__; color:__TEXTO__; border-top-left-radius:4px;}
+.st-key-chat_painel .msg.eu {align-self:flex-end; background:#2a78d6; color:#fff; border-top-right-radius:4px;}
+.st-key-chat_painel .msg .it {display:block; padding-left:12px; position:relative; margin-top:3px;}
+.st-key-chat_painel .msg .it::before {content:"•"; position:absolute; left:2px; opacity:.7;}
+.st-key-chat_painel [data-testid="stPills"] button {font-size:.7rem; padding:2px 9px; min-height:0;}
+.st-key-chat_painel [data-testid="stChatInput"] textarea {font-size:.82rem;}
+.st-key-chat_painel .msg .sub {display:block; padding-left:12px; margin-top:2px; opacity:.85; font-size:.76rem;}
+.st-key-chat_painel [data-testid="stChatInput"] > div {background:__CAMPO__ !important; border-color:__BORDA__ !important;}
+.st-key-chat_painel [data-testid="stChatInput"] textarea {color:__TEXTO__ !important; -webkit-text-fill-color:__TEXTO__;}
+.st-key-chat_painel [data-testid="stChatInput"] textarea::placeholder {color:__SUAVE__ !important; -webkit-text-fill-color:__SUAVE__;}
+@media (prefers-reduced-motion: reduce) {{ .st-key-chat_painel, .st-key-chat_aba {{transition:none !important;}} }}
+</style>
+""".replace("{{", "{").replace("}}", "}")
+for _k, _v in {"__FUNDO__": "#111a2e" if ESCURO else "#ffffff", "__BORDA__": "#24324f" if ESCURO else "#dfe4ee",
+               "__TEXTO__": "#e8edf7" if ESCURO else "#1d2433", "__SUAVE__": "#8f9bb5" if ESCURO else "#6b7385",
+               "__BOLHA__": "#1b2742" if ESCURO else "#eef2f9",
+               "__CAMPO__": "#0d1526" if ESCURO else "#ffffff"}.items():
+    _CHAT_CSS = _CHAT_CSS.replace(_k, _v)
+st.markdown(_CHAT_CSS, unsafe_allow_html=True)
+
+
+def _chat_alterna():
+    st.session_state["chat_aberto"] = not st.session_state.get("chat_aberto", False)
+
+
+def _chat_pergunta(txt):
+    txt = (txt or "").strip()
+    if not txt:
+        return
+    msgs = st.session_state.setdefault("chat_msgs", [("bot", chat.BOAS_VINDAS)])
+    try:
+        resp = chat.responder(txt, BASE, R)
+    except Exception:                 # uma pergunta com problema não derruba o painel
+        resp = "Tive um problema para calcular essa resposta. Tente perguntar de outro jeito."
+    msgs += [("eu", txt[:500]), ("bot", resp)]
+    del msgs[1:-40]                   # guarda só as últimas mensagens da sessão
+
+
+def _chat_digitou():
+    _chat_pergunta(st.session_state.get("chat_txt"))
+
+
+def _chat_sugestao():
+    v = st.session_state.get("chat_sug")
+    st.session_state["chat_sug"] = None
+    _chat_pergunta(v)
+
+
+@st.fragment
+def assistente():
+    aberto = st.session_state.get("chat_aberto", False)
+    with st.container(key="chat_aba"):
+        st.button("‹" if aberto else "›", key="chat_botao", on_click=_chat_alterna)
+        if aberto:
+            st.markdown('<span class="chat-aberto"></span>', unsafe_allow_html=True)
+    with st.container(key="chat_painel"):
+        msgs = st.session_state.setdefault("chat_msgs", [("bot", chat.BOAS_VINDAS)])
+        bolhas = "".join(f'<div class="msg {q}">{chat.para_html(t)}</div>' for q, t in reversed(msgs))
+        st.markdown('''<div class="chat-cab"><div class="chat-ico">💬</div><div><div class="chat-tit">Assistente do painel</div>
+<div class="chat-sub">versão inicial · respostas prontas a partir dos dados do painel</div></div></div>''',
+                    unsafe_allow_html=True)
+        st.markdown(f'<div class="chat-msgs">{bolhas}</div>', unsafe_allow_html=True)
+        st.pills("Sugestões", chat.SUGESTOES, key="chat_sug", on_change=_chat_sugestao, label_visibility="collapsed")
+        st.chat_input("Pergunte sobre a audiência…", key="chat_txt", on_submit=_chat_digitou, max_chars=500)
+
+
+assistente()
