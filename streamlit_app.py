@@ -2833,9 +2833,11 @@ _CHAT_CSS = """
 .stApp:has(.chat-aberto) .st-key-chat_painel {transform:none; visibility:visible;
     transition:transform .45s cubic-bezier(.2,.8,.2,1), visibility 0s;}
 .st-key-chat_painel .chat-cab {display:flex; align-items:center; gap:10px; padding-bottom:8px; border-bottom:1px solid __BORDA__;}
-.st-key-chat_painel .chat-ico {width:30px; height:30px; border-radius:9px; display:grid; place-items:center; font-size:16px;
-    background:linear-gradient(160deg, #2a78d6, #7b5cff); color:#fff;}
+.st-key-chat_painel .chat-ico {width:42px; height:42px; object-fit:contain; flex:none; margin:-6px 0 -4px -4px;
+    filter:drop-shadow(0 2px 6px rgba(0,120,255,.35)); animation:aceno 3.2s ease-in-out infinite; transform-origin:50% 90%;}
+@keyframes aceno {{ 0%,70%,100% {{transform:rotate(0);}} 78% {{transform:rotate(-7deg);}} 86% {{transform:rotate(5deg);}} 93% {{transform:rotate(-3deg);}} }}
 .st-key-chat_painel .chat-tit {font-weight:700; font-size:.92rem; color:__TEXTO__;}
+.st-key-chat_painel .chat-tag {font-weight:500; font-size:.7rem; color:__SUAVE__; margin-left:4px;}
 .st-key-chat_painel .chat-sub {font-size:.7rem; color:__SUAVE__;}
 .st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) {flex:1 1 0; min-height:0; overflow:hidden;}
 .st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) div:has(.chat-msgs) {height:100%; min-height:0;}
@@ -2856,7 +2858,17 @@ _CHAT_CSS = """
 .st-key-chat_painel [data-testid="stPills"] button {font-size:.7rem; padding:2px 9px; min-height:0;}
 .st-key-chat_painel [data-testid="stChatInput"] textarea {font-size:.82rem;}
 .st-key-chat_painel .msg .tt {display:block; margin:4px 0 2px;}
-.st-key-chat_painel .msg details.como {margin-top:7px; font-size:.7rem; opacity:.8;}
+.st-key-chat_painel .msg-pe {display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:7px;}
+.st-key-chat_painel .msg-pe details {font-size:.7rem;}
+.st-key-chat_painel .msg-pe details.como {opacity:.8;}
+.st-key-chat_painel .msg-pe details[open] {flex-basis:100%;}
+.st-key-chat_painel .msg-pe summary {cursor:pointer; color:__SUAVE__; list-style-position:inside;}
+.st-key-chat_painel .msg-pe details.graf-det summary {color:#2a78d6; font-weight:600;}
+.st-key-chat_painel .g-caixa {margin-top:6px; display:grid; gap:10px;}
+.st-key-chat_painel .g-item {background:__CAMPO__; border:1px solid __BORDA__; border-radius:10px; padding:8px 8px 4px;
+    animation:pop .3s ease-out both;}
+.st-key-chat_painel svg.graf {display:block; width:100%; height:auto; overflow:visible;}
+.st-key-chat_painel .msg details.como {margin-top:0;}
 .st-key-chat_painel .msg details.como summary {cursor:pointer; color:__SUAVE__;}
 .st-key-chat_painel .msg details.como ul {margin:4px 0 0; padding-left:16px;}
 .st-key-chat_painel .msg.digitando {display:flex; gap:4px; padding:11px 13px;}
@@ -2943,7 +2955,11 @@ def _chat_responde(txt):
                                                         reserva=CHAT_RESERVA)
             st.session_state["chat_usadas"] = usadas + 1
             registra("assistente.pergunta", recurso_tipo="assistente", detalhe=f"{len(consultas)} consultas · {usado}")
-            return {"q": "bot", "t": resp, "consultas": consultas, "modo": "ia", "modelo": usado}
+            try:
+                graf = chat.graficos(consultas, cores=COR_PROG)
+            except Exception:             # gráfico é opcional: nunca derruba a resposta
+                graf = []
+            return {"q": "bot", "t": resp, "consultas": consultas, "modo": "ia", "modelo": usado, "graficos": graf}
         except Exception as ex:           # API fora, chave errada, limite do plano…: cai nas respostas prontas
             aviso = f"*(A IA não respondeu agora: {ex.__class__.__name__}. Resposta automática:)*\n"
             return {"q": "bot", "t": aviso + chat.responder(txt, BASE, R), "modo": "erro"}
@@ -2962,7 +2978,10 @@ def _bolha(m):
         reserva = m.get("modelo") and m.get("modelo") != CHAT_MODELO
         modelo = f'<li class="mod">respondido por {html_escape(m.get("modelo") or CHAT_MODELO)}' + \
                  (" (reserva: o principal estava indisponível)" if reserva else "") + "</li>"
-        corpo += f'<details class="como"><summary>Como cheguei nisso</summary><ul>{itens}{modelo}</ul></details>'
+        graf = "".join(f'<div class="g-item">{g}</div>' for g in m.get("graficos") or [])
+        corpo += ('<div class="msg-pe">'
+                  + (f'<details class="graf-det"><summary>📊 Ver gráfico</summary><div class="g-caixa">{graf}</div></details>' if graf else "")
+                  + f'<details class="como"><summary>Como cheguei nisso</summary><ul>{itens}{modelo}</ul></details></div>')
     return f'<div class="msg {m["q"]}">{corpo}</div>'
 
 
@@ -2980,10 +2999,8 @@ def assistente():
     with st.container(key="chat_painel"):
         msgs = _chat_msgs()
         pendente = st.session_state.get("chat_pendente")
-        modo = (f"IA · {CHAT_MODELO} · consulta os dados do painel" if CHAT_CHAVE
-                else "respostas prontas a partir dos dados do painel")
-        st.markdown(f'''<div class="chat-cab"><div class="chat-ico">💬</div><div><div class="chat-tit">Assistente do painel</div>
-<div class="chat-sub">{modo}</div></div></div>''', unsafe_allow_html=True)
+        st.markdown(f'''<div class="chat-cab"><img class="chat-ico" src="data:image/png;base64,{chat.PIPECO_PNG}" alt="PIPECO">
+<div class="chat-tit">PIPECO <span class="chat-tag">assistente do painel</span></div></div>''', unsafe_allow_html=True)
         espera = '<div class="msg bot digitando"><i></i><i></i><i></i></div>' if pendente else ""
         caixa = st.empty()
         caixa.markdown(f'<div class="chat-msgs">{espera}{"".join(_bolha(m) for m in reversed(msgs))}</div>', unsafe_allow_html=True)
