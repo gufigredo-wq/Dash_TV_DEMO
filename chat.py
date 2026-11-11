@@ -272,6 +272,11 @@ def responder(texto, base, rodada=None):
 # MODO IA (Gemini) · ferramentas de consulta executadas pelo painel nos dados internos
 # =====================================================================================================================
 MODELO_PADRAO = "gemini-3.5-flash"
+MODELO_RESERVA = "gemini-3.5-flash-lite"   # entra quando o principal cai ou estoura o limite de requisições
+# erros que justificam tentar o modelo reserva: modelo inexistente, tempo esgotado, limite de requisições, servidor fora
+CODIGOS_RESERVA = {404, 408, 429, 500, 502, 503, 504}
+PAUSA_PRINCIPAL = {429: 60, 503: 60, 500: 30, 502: 30, 504: 30, 408: 30, 404: 600}   # segundos usando só a reserva
+_ESTADO = {"principal_pausado_ate": 0.0}  # vale para o servidor todo: o limite de requisições é da chave, não da sessão
 MAX_PASSOS = 6                     # consultas encadeadas por pergunta
 MAX_LINHAS = 80                    # linhas devolvidas por consulta (o resto é resumido)
 HISTORICO = 8                      # mensagens anteriores enviadas como contexto
@@ -544,19 +549,14 @@ def _texto(resp):
     return "".join(partes).strip()
 
 
-def perguntar_ia(pergunta, fonte, chave, modelo=None, historico=(), cliente=None):
-    """Pergunta -> (resposta em markdown, consultas feitas [{'ferramenta', 'args'}]). Levanta exceção se a API falhar."""
-    from google import genai
+def _pergunta_um_modelo(cli, modelo, conteudos_ini, fonte):
     from google.genai import types
-    cli = cliente or genai.Client(api_key=chave)
-    conteudos = [types.Content(role="user" if q == "eu" else "model", parts=[types.Part(text=t)])
-                 for q, t in list(historico)[-HISTORICO:] if t]
-    conteudos.append(types.Content(role="user", parts=[types.Part(text=pergunta)]))
+    conteudos = list(conteudos_ini)
     cfg = types.GenerateContentConfig(system_instruction=instrucoes(fonte), tools=_declaracoes(),
                                       automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True))
     consultas = []
     for _ in range(MAX_PASSOS):
-        resp = cli.models.generate_content(model=modelo or MODELO_PADRAO, contents=conteudos, config=cfg)
+        resp = cli.models.generate_content(model=modelo, contents=conteudos, config=cfg)
         chamadas = resp.function_calls or []
         if not chamadas:
             txt = _texto(resp)
@@ -569,9 +569,48 @@ def perguntar_ia(pergunta, fonte, chave, modelo=None, historico=(), cliente=None
             partes.append(types.Part.from_function_response(name=ch.name, response=executar(ch.name, args, fonte)))
         conteudos.append(types.Content(role="user", parts=partes))
     # passou do limite de consultas: pede a resposta final sem ferramentas
-    cfg_final = types.GenerateContentConfig(system_instruction=instrucoes(fonte))
-    resp = cli.models.generate_content(model=modelo or MODELO_PADRAO, contents=conteudos, config=cfg_final)
+    resp = cli.models.generate_content(model=modelo, contents=conteudos,
+                                       config=types.GenerateContentConfig(system_instruction=instrucoes(fonte)))
     return (_texto(resp) or "A pergunta exigiu consultas demais. Tente algo mais específico."), consultas
+
+
+def _justifica_reserva(ex):
+    """Erro em que vale tentar o modelo reserva? Devolve o código (ou 0 para falhas de rede), ou None."""
+    codigo = getattr(ex, "code", None)
+    if isinstance(codigo, int):
+        return codigo if codigo in CODIGOS_RESERVA else None
+    nome = ex.__class__.__name__.lower()
+    return 0 if ("timeout" in nome or "connect" in nome or "network" in nome) else None
+
+
+def perguntar_ia(pergunta, fonte, chave, modelo=None, historico=(), cliente=None, reserva=None, agora=None):
+    """Pergunta -> (resposta em markdown, consultas [{'ferramenta', 'args'}], modelo que respondeu).
+
+    Tenta o modelo principal; se ele cair ou estourar o limite (429, 5xx, tempo esgotado, modelo inexistente), refaz a
+    pergunta do zero no modelo reserva e deixa o principal em pausa por alguns segundos. Levanta exceção se os dois falharem."""
+    import time
+    from google import genai
+    from google.genai import types
+    agora = agora if agora is not None else time.time()
+    cli = cliente or genai.Client(api_key=chave)
+    principal, reserva = modelo or MODELO_PADRAO, reserva if reserva is not None else MODELO_RESERVA
+    conteudos = [types.Content(role="user" if q == "eu" else "model", parts=[types.Part(text=t)])
+                 for q, t in list(historico)[-HISTORICO:] if t]
+    conteudos.append(types.Content(role="user", parts=[types.Part(text=pergunta)]))
+    ordem = [principal] if not reserva or reserva == principal else (
+        [reserva] if agora < _ESTADO["principal_pausado_ate"] else [principal, reserva])
+    for k, mod in enumerate(ordem):
+        try:
+            txt, consultas = _pergunta_um_modelo(cli, mod, conteudos, fonte)
+            return txt, consultas, mod
+        except Exception as ex:
+            codigo = _justifica_reserva(ex)
+            ultimo = k == len(ordem) - 1
+            if mod == principal and codigo is not None:
+                _ESTADO["principal_pausado_ate"] = agora + PAUSA_PRINCIPAL.get(codigo, 30)
+            if ultimo or codigo is None:
+                raise
+    raise RuntimeError("nenhum modelo disponível")
 
 
 def descreve_consulta(c):
