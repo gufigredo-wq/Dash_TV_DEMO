@@ -181,7 +181,8 @@ else:
 SOMBRA, SOMBRA2 = (".35", ".5") if ESCURO else (".06", ".10")
 FONTE_TXT = "Inter, Segoe UI, Helvetica Neue, Arial, sans-serif"
 # semáforo da meta 100% (mesmas cores da apresentação)
-COR_SEM = {"Provável": "#2e7d32", "Indefinido": "#f5a623", "Improvável": "#c62828", "–": CINZA}
+VERDE, AMARELO, VERMELHO = "#008300", "#eda100", "#e34948"          # mesma paleta do painel de rádio
+COR_SEM = {"Provável": VERDE, "Indefinido": AMARELO, "Improvável": VERMELHO, "–": CINZA}
 COR_SEM_CLARO = ({"Provável": "#173a2a", "Indefinido": "#3d3214", "Improvável": "#45201f", "–": "#1c2740"} if ESCURO else
                  {"Provável": "#d9f2e6", "Indefinido": "#fdf0cc", "Improvável": "#fbdcdc", "–": "#f0efec"})
 COR_MET = {"Audiência": AZUL, "Share": LARANJA}
@@ -240,6 +241,29 @@ header[data-testid="stHeader"] {{background:transparent; height:0;}}
 .kpi .v {{font-size:1.65rem; font-weight:600; color:{TINTA}; line-height:1.25; margin-top:2px; font-variant-numeric:tabular-nums;}}
 .kpi .d {{font-size:.74rem; color:{CINZA}; line-height:1.4;}}
 .kpi .up {{color:{SOBE}; font-weight:600;}} .kpi .down {{color:{DESCE}; font-weight:600;}}
+.kpi .up, .kpi .down {{display:inline-block; padding:0 7px; border-radius:999px; line-height:1.55; white-space:nowrap;}}
+.kpi .up {{background:color-mix(in srgb, {SOBE} 14%, transparent);}}
+.kpi .down {{background:color-mix(in srgb, {DESCE} 14%, transparent);}}
+.kpi .spark {{display:block; width:100%; height:30px; margin:4px 0 2px;}}
+/* resumo em frases (como no rádio) */
+ul.resumo {{margin:6px 0 4px; padding:0; list-style:none; display:grid; gap:7px;}}
+ul.resumo li {{display:flex; gap:10px; align-items:flex-start; font-size:.86rem; color:{TINTA2}; line-height:1.55;
+    animation:subir .45s cubic-bezier(.2,.7,.2,1) backwards;}}
+ul.resumo li:nth-child(2) {{animation-delay:.06s;}} ul.resumo li:nth-child(3) {{animation-delay:.12s;}}
+ul.resumo li:nth-child(4) {{animation-delay:.18s;}} ul.resumo li:nth-child(5) {{animation-delay:.24s;}}
+ul.resumo li b {{color:{TINTA};}}
+ul.resumo .ic {{flex:none; width:22px; height:22px; border-radius:7px; display:grid; place-items:center; font-size:.72rem; font-weight:700;}}
+ul.resumo .ic.sobe {{background:color-mix(in srgb, {SOBE} 16%, transparent); color:{SOBE};}}
+ul.resumo .ic.desce {{background:color-mix(in srgb, {DESCE} 16%, transparent); color:{DESCE};}}
+ul.resumo .ic.neutro {{background:color-mix(in srgb, #2a78d6 14%, transparent); color:#2a78d6;}}
+/* tabelas no padrão do painel */
+table.rk td.vazio {{color:{CINZA};}}
+/* rodapé com a marca */
+.st-key-notas [data-testid="stVerticalBlock"] {{gap:.25rem !important;}}
+.rodape-marca {{display:flex; align-items:center; gap:12px; margin:10px 0 6px; padding:10px 14px; border-radius:12px;
+    background:linear-gradient(110deg, #001564, #0b3fae); color:#b9c6ea; font-size:.72rem; line-height:1.5;}}
+.rodape-marca img {{height:30px; width:auto;}}
+.rodape-marca b {{color:#fff;}}
 .painel {{display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:10px;}}
 .pg {{background:#f4f6fa; border-radius:6px; padding:9px 10px 10px;}}
 .pg .n {{font-size:.82rem; font-weight:600; color:{TINTA}; margin:0 0 6px;}}
@@ -743,13 +767,62 @@ def _sem_tags(t):
     return re.sub(r"<[^>]+>", "", str(t)).replace('"', "")
 
 
+def sparkline(vals, cor, larg=120, alt=30):
+    """Minigráfico em SVG (últimos meses), com área suave e o último ponto destacado (o mesmo do painel de rádio)."""
+    v = [float(x) for x in vals if x is not None and pd.notna(x)]
+    if len(v) < 3:
+        return ""
+    lo, hi = min(v), max(v)
+    amp = (hi - lo) or 1
+    pts = [(i / (len(v) - 1) * (larg - 6) + 3, alt - 4 - (x - lo) / amp * (alt - 8)) for i, x in enumerate(v)]
+    linha = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    area = f"3,{alt} " + linha + f" {pts[-1][0]:.1f},{alt}"
+    gid = f"g{abs(hash((tuple(v), cor))) % 10**8}"
+    return (f'<svg class="spark" viewBox="0 0 {larg} {alt}" preserveAspectRatio="none" aria-hidden="true">'
+            f'<defs><linearGradient id="{gid}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="{cor}" stop-opacity=".28"/>'
+            f'<stop offset="1" stop-color="{cor}" stop-opacity="0"/></linearGradient></defs>'
+            f'<polygon points="{area}" fill="url(#{gid})"/><polyline points="{linha}" fill="none" stroke="{cor}" stroke-width="1.8" '
+            f'stroke-linejoin="round" stroke-linecap="round"/><circle cx="{pts[-1][0]:.1f}" cy="{pts[-1][1]:.1f}" r="2.8" fill="{cor}"/></svg>')
+
+
 def kpis(lista):
+    """Cartões: (título, valor, descrição, cor[, valores da minilinha])."""
+    itens = [(tuple(x) + (None,))[:5] for x in lista]
     if isinstance(st.session_state.get("_kpis_run"), list):
         st.session_state["_kpis_run"].append({"aba": st.session_state.get("_aba_atual", ""),
-                                              "cartoes": [(_sem_tags(t), _sem_tags(v), _sem_tags(d), c) for t, v, d, c in lista]})
+                                              "cartoes": [(_sem_tags(t), _sem_tags(v), _sem_tags(d), c) for t, v, d, c, _ in itens]})
     st.markdown('<div class="kpis">' + "".join(
         f'<div class="kpi" style="--c:{c}"><div class="t">{t}</div><div class="v">{v}</div>'
-        f'<div class="d" title="{_sem_tags(d)}">{d}</div></div>' for t, v, d, c in lista) + "</div>", unsafe_allow_html=True)
+        + (sparkline(sp, c) if sp is not None else "") +
+        f'<div class="d" title="{_sem_tags(d)}">{d}</div></div>' for t, v, d, c, sp in itens) + "</div>", unsafe_allow_html=True)
+
+
+def tabela_html(df, numericas=None, destaque=None, indice=True):
+    """DataFrame -> tabela no padrão do painel (classe rk), no lugar das tabelas cruas do Streamlit."""
+    numericas = set(numericas if numericas is not None else [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
+    def cel(c, v):
+        if v is None or (isinstance(v, float) and pd.isna(v)) or v == "":
+            return "<td class='n vazio'>–</td>" if c in numericas else "<td class='vazio'>–</td>"
+        if isinstance(v, (bool, np.bool_)):
+            txt = "sim" if v else "não"
+        elif isinstance(v, (int, np.integer)):
+            txt = str(v)
+        elif isinstance(v, (float, np.floating)):
+            txt = br(v)
+        else:
+            txt = html_esc(str(v))
+        estilo = f" style='{destaque(c, v)}'" if destaque else ""
+        return f"<td class='n'{estilo}>{txt}</td>" if c in numericas else f"<td{estilo}>{txt}</td>"
+    cab = (f"<th>{html_esc(str(df.index.name or ''))}</th>" if indice else "") + "".join(f"<th class='n'>{html_esc(str(c))}</th>" if c in numericas
+                                                     else f"<th>{html_esc(str(c))}</th>" for c in df.columns)
+    linhas = "".join("<tr>" + (f"<td><b>{html_esc(str(i))}</b></td>" if indice else "") +
+                     "".join(cel(c, r[c]) for c in df.columns) + "</tr>" for i, r in df.iterrows())
+    st.markdown(f"<div style='overflow-x:auto'><table class='rk'><tr>{cab}</tr>{linhas}</table></div>", unsafe_allow_html=True)
+
+
+def html_esc(t):
+    from html import escape
+    return escape(t)
 
 
 def sem_html(s):
@@ -951,7 +1024,7 @@ st.session_state["_graf_run"] = []
 st.session_state["_kpis_run"] = []
 
 # ---- visualizações da tela inicial: as padrão já vêm marcadas; as extras entram pelo rodapé (🧩 Visualizações)
-VIS_PADRAO = {"evolucao": "Evolução (barras)", "desempenho": "Desempenho do último mês (tabela)", "anual": "Média anual",
+VIS_PADRAO = {"resumo": "Resumo em frases", "evolucao": "Evolução (barras)", "desempenho": "Desempenho do último mês (tabela)", "anual": "Média anual",
               "curva": "Curva do ano", "calor": "Mapa de calor", "comparativo": "Comparativo em linhas"}
 VIS_EXTRA = {"outra": "A outra métrica (audiência ↔ share)", "yoy": "Variação vs mesmo mês do ano anterior",
              "mm": "Variação vs mês anterior", "tendencia": "Tendência: média móvel de 12 meses",
@@ -1371,6 +1444,7 @@ def extras_tv(sel, met, serie_, periodos, p0, p1, foco, progs):
     pedidas = [c for c in VIS_EXTRA if mostra(c)]
     if not pedidas:
         return
+    secao(4, "Mais visualizações", "escolhidas em 🧩 Visualizações da tela inicial, no rodapé")
     rot = [_rot_per(x, serie_) for x in periodos]
     faixa_txt = f"{rot[0]} a {rot[-1]}" if rot else ""
     un = {"Mês": "mês", "Trimestre": "trimestre", "Ano": "ano"}[serie_]
@@ -1490,6 +1564,62 @@ def extras_tv(sel, met, serie_, periodos, p0, p1, foco, progs):
                 funcs[cod]()
 
 
+def _icone_resumo(f_):
+    t = _sem_tags(f_).lower()
+    if "maior alta" in t:
+        return "⇅", "neutro"
+    if "lidera" in t:
+        return "★", "sobe"
+    alta, queda = t.count("alta de") + t.count("acima"), t.count("queda de") + t.count("abaixo")
+    return ("▲", "sobe") if alta > queda else (("▼", "desce") if queda > alta else ("●", "neutro"))
+
+
+def resumo_tv(sel, met, ult, progs):
+    """Frases curtas com os números do último mês (como o resumo do painel de rádio)."""
+    un = "pt" if met == "Audiência" else "p.p."
+    suf = "" if met == "Audiência" else "%"
+    m_ant, m_aa = ult - pd.DateOffset(months=1), ult - pd.DateOffset(years=1)
+
+    def var(d, rot):
+        if d is None or pd.isna(d):
+            return None
+        if abs(d) < .005:
+            return f"estável vs {rot}"
+        return f"{'alta' if d > 0 else 'queda'} de {br(abs(d))} {un} vs {rot}"
+
+    frases = []
+    for p in sel[:4]:
+        s = serie(p, met)
+        v = s.get(ult, np.nan)
+        if pd.isna(v):
+            continue
+        partes = [x for x in (var(v - s.get(m_ant, np.nan), rot_mes(m_ant)), var(v - s.get(m_aa, np.nan), rot_mes(m_aa))) if x]
+        frases.append(f"<b>{nome_p(p)}</b> marcou <b>{br(v)}{suf}</b> de {met.lower()} em {rot_mes(ult)}"
+                      + (": " + " e ".join(partes) if partes else "") + ".")
+    faixa = sel[0] if sel else None
+    if faixa in diario.FAIXAS:
+        m1, _ = media_parcial(faixa, met, ult.year, ult.month)
+        m0, _ = media_parcial(faixa, met, ult.year - 1, ult.month)
+        if pd.notna(m1) and pd.notna(m0):
+            d = m1 - m0
+            periodo = f"jan–{tv.MESES[ult.month - 1]}" if ult.month < 12 else "o ano"
+            frases.append(f"Na média de {ult.year} ({periodo}), {nome_p(faixa)} tem <b>{br(m1)}{suf}</b>, "
+                          + (f"{br(abs(d))} {un} {'acima' if d > 0 else 'abaixo'} do mesmo período de {ult.year - 1}."
+                             if abs(d) >= .005 else f"igual ao mesmo período de {ult.year - 1}."))
+    vari = []
+    for p in progs:
+        s = serie(p, met)
+        if pd.notna(s.get(ult, np.nan)) and pd.notna(s.get(m_aa, np.nan)):
+            vari.append((p, s[ult] - s[m_aa]))
+    if len(vari) >= 2:
+        vari.sort(key=lambda x: x[1])
+        (pq, dq), (pa, da) = vari[0], vari[-1]
+        if da > 0 and dq < 0:
+            frases.append(f"Entre os programas, a maior alta vs {rot_mes(m_aa)} foi do <b>{nome_p(pa)}</b> ({sinal(da)} {un}); "
+                          f"a maior queda, do <b>{nome_p(pq)}</b> ({sinal(dq)} {un}).")
+    return frases
+
+
 def pagina_desempenho():
     if BASE.empty:
         st.warning("A base mensal está vazia: falta o arquivo dados/tv_mensal.csv no repositório.")
@@ -1527,6 +1657,7 @@ def pagina_desempenho():
     # ---- KPIs: último mês e média do ano (parcial) de cada programa selecionado
     ult = BASE["mes"].max()
     ano = ult.year
+    secao(1, "Indicadores do último mês", f"{rot_mes(ult)} · {nome_p(faixa)}" + (" e programas selecionados" if sel_progs else ""))
     lista = []
     for p in sel:
         s = serie(p, met)
@@ -1535,7 +1666,8 @@ def pagina_desempenho():
         cor = COR_PROG.get(p, CINZA)
         lista.append((f"{nome_p(p)} · {rot_mes(ult)}", br(v),
                       f"{_dpt(v, ant)} vs mês anterior ({rot_mes(ult - pd.DateOffset(months=1))})<br>"
-                      f"{_dpt(v, aa)} vs mesmo mês do ano anterior ({rot_mes(ult - pd.DateOffset(years=1))})", cor))
+                      f"{_dpt(v, aa)} vs mesmo mês do ano anterior ({rot_mes(ult - pd.DateOffset(years=1))})", cor,
+                      s[(s.index > ult - pd.DateOffset(months=13)) & (s.index <= ult)].tolist()))
         m1, n1 = media_parcial(p, met, ano, ult.month)
         m0, _ = media_parcial(p, met, ano - 1, ult.month)
         parcial = ult.month < 12
@@ -1543,7 +1675,16 @@ def pagina_desempenho():
                       ("média parcial" if parcial else "média do ano") + f" de {ano} · {_dpt(m1, m0)} vs " +
                       (f"média parcial de {ano - 1} (mesmo período)" if parcial else f"média de {ano - 1}"), cor))
     kpis(lista)
+    frases = resumo_tv(sel, met, ult, progs)
+    st.session_state["_resumo_run"] = [_sem_tags(f_) for f_ in frases]
+    if mostra("resumo") and frases:
+        with cartao("Resumo", f"gerado a partir dos números de {rot_mes(ult)} · {met.lower()}"):
+            st.markdown('<ul class="resumo">' + "".join(
+                f'<li><span class="ic {_icone_resumo(f_)[1]}">{_icone_resumo(f_)[0]}</span><span>{f_}</span></li>' for f_ in frases)
+                + "</ul>", unsafe_allow_html=True)
 
+    if any(mostra(c) for c in ("evolucao", "desempenho", "anual")):
+        secao(2, "Evolução e desempenho", "período, média do ano e posição entre os programas")
     if mostra("evolucao"):
         # ---- evolução
         nome_s = {"Mês": "mês", "Trimestre": "trimestre", "Ano": "ano"}[serie_]
@@ -1603,6 +1744,8 @@ def pagina_desempenho():
             st.plotly_chart(fig, config=CFG, key="v_media_anual")
 
     # ---- programa em foco
+    if any(mostra(c) for c in ("curva", "calor", "comparativo")):
+        secao(3, "Histórico e sazonalidade", "o programa em foco ao longo dos anos e o comparativo do período")
     if mostra("curva") or mostra("calor") or mostra("sazonal"):
         foco = st.segmented_control("Programa em foco nos gráficos abaixo", sel, default=sel[0], format_func=nome_p,
                                     key="p1_foco_" + "_".join(sel)) or sel[0]
@@ -1843,7 +1986,7 @@ def grafico_ano(prog, met, chave):
     if r is not None and len(pm):
         xr = xm(pm.index)
         fig.add_scatter(x=xr, y=[r["nec100"]] * len(xr), mode="lines", name=f"média necessária p/ meta 100% ({br(r['nec100'])})",
-                        line=dict(color="#c62828", width=1.5, dash="dash"),
+                        line=dict(color=VERMELHO, width=1.5, dash="dash"),
                         hovertemplate=f"média necessária em {REST} para a meta 100%: {br(r['nec100'])}<extra></extra>")
     layout(fig, 340, legenda=True)
     fig.update_xaxes(categoryorder="array", categoryarray=MESES)
@@ -1983,7 +2126,7 @@ def pagina_resultados():
                         continue
                     cel = "".join(
                         "<td class='n' style='color:#8a8984'>—</td>" if pd.isna(r[c]) else
-                        f"<td class='n' style='{'color:#c62828; font-weight:700' if tv.semaforo(r[c]) != tv.semaforo(of) else ''}'>{tv.fmt_p(r[c])}</td>"
+                        f"<td class='n' style='{'color:' + VERMELHO + '; font-weight:700' if tv.semaforo(r[c]) != tv.semaforo(of) else ''}'>{tv.fmt_p(r[c])}</td>"
                         for c in cols)
                     linhas += (f"<tr><td>{prog} · {'aud.' if m == 'Audiência' else 'share'}</td>"
                                f"<td class='n' style='background:{COR_SEM_CLARO[tv.semaforo(of)]}'><b>{tv.fmt_p(of)}</b></td>{cel}"
@@ -2007,7 +2150,7 @@ def pagina_resultados():
                 fig.add_vline(x=50, line=dict(color=CINZA, width=1, dash="dot"))
                 dentro = v["percentil"].between(.1, .9)
                 fig.add_scatter(x=v["percentil"] * 100, y=rot_y, mode="markers",
-                                marker=dict(size=10, color=[AZUL if d else "#c62828" for d in dentro]),
+                                marker=dict(size=10, color=[AZUL if d else VERMELHO for d in dentro]),
                                 customdata=np.c_[[br(x) for x in v["realizado"]], [br(x) for x in v[col_proj]] if col_proj else [""] * len(v),
                                                  v["faixa 80%"].astype(str).str.replace(".", ","), v["posição"]],
                                 hovertemplate="%{y}<br>realizado %{customdata[0]} · projetado %{customdata[1]}<br>faixa 80%: %{customdata[2]}"
@@ -2024,7 +2167,7 @@ def pagina_resultados():
                 kpis([("Dentro da faixa de 80%", f"{d80} de {n}", f"esperado ≈ {round(.8 * n)}", AZUL),
                       ("Fora da faixa de 95%", f"{len(f95)} de {n}",
                        (", ".join(f"{p} ({'aud.' if m == 'Audiência' else 'share'})" for p, m in f95.index) or "nenhuma") +
-                       f" · esperado ≈ {max(1, round(.05 * n))}", "#c62828")])
+                       f" · esperado ≈ {max(1, round(.05 * n))}", VERMELHO)])
                 erro_col = next((c for c in ac.columns if str(c).startswith("erro")), None)
                 if erro_col:
                     txt = []
@@ -2063,8 +2206,8 @@ def pagina_resultados():
                 t["série"] = t["programa"] + " · " + t["metrica"].map({"Audiência": "aud.", "Share": "share"})
                 t = t[["série", "ano", "acum. jan–set" if "acum. jan–set" in t else t.columns[3], "projetado", "realizado", "erro",
                        "meia-largura IC95 atual", "dentro da margem?"]]
-                st.dataframe(t.style.format({c: "{:.2f}" for c in t.columns if t[c].dtype.kind == "f"}, decimal=","),
-                             hide_index=True, width="stretch", height=300)
+                tabela_html(t, indice=False,
+                            destaque=lambda c, v: (f"color:{VERMELHO}; font-weight:700" if c == "dentro da margem?" and str(v).lower() == "não" else ""))
 
 
 def pagina_diaria(faixa):
@@ -2142,6 +2285,9 @@ def pagina_diaria(faixa):
             fig.add_scatter(x=d.index[fim_sem], y=d[col_s][fim_sem], mode="markers", name="sábado e domingo",
                             marker=dict(size=6, color=LARANJA), hovertemplate="%{x|%a %d/%m}: %{y:.2f}<extra>fim de semana</extra>")
             layout(fig, 330, legenda=True)
+            dias_x = [x for x in pd.to_datetime(d.index) if x.day in (1, 15)]                  # datas em português
+            fig.update_xaxes(tickvals=dias_x, ticktext=[f"{x.day} {tv.MESES[x.month - 1]}" for x in dias_x])
+            fig.update_traces(xhoverformat="%d/%m/%Y")
             st.plotly_chart(fig, config=CFG, key=f"v_rd_dia_{faixa}")
     # ---- composição da projeção, efeitos, dia da semana, validação
     c1, c2 = st.columns(2)
@@ -2155,7 +2301,7 @@ def pagina_diaria(faixa):
             t.index.name = "mês"
             for c in t.columns:
                 t[c] = [("" if pd.isna(v) else (f"{int(v)}" if c == "dias realizados" else br(v))) for v in t[c]]
-            st.dataframe(t, width="stretch")
+            tabela_html(t, numericas=list(t.columns))
     ef = r["efeitos"]
     with c2:
         if ef is not None and "audiência (pts, aprox.)" in ef:
@@ -2197,7 +2343,15 @@ def pagina_diaria(faixa):
     if r["cmp"] is not None and len(r["cmp"]):
         with cartao("Comparação com a rodada anterior", "projeção e chance antes e agora"):
             t = r["cmp"].copy()
-            st.dataframe(t.map(lambda v: br(v) if isinstance(v, (int, float, np.floating)) and pd.notna(v) else v), width="stretch", hide_index=True)
+            if "item" in t:                                       # chances em %, como no resto do painel
+                eh_p = t["item"].astype(str).str.startswith("P(")
+                for c in ("anterior", "atual", "diferença"):
+                    if c in t:
+                        t[c] = [(f"{sinal(v * 100, 1)} p.p." if c == "diferença" else f"{br(v * 100, 1)}%") if p_ and pd.notna(v)
+                                else (sinal(v) if c == "diferença" and pd.notna(v) else (br(v) if pd.notna(v) else ""))
+                                for v, p_ in zip(t[c], eh_p)]
+                t["item"] = t["item"].astype(str).str.replace("P(meta 100%)", "chance da meta 100%", regex=False)
+            tabela_html(t, indice=False, numericas=[c for c in ("anterior", "atual", "diferença") if c in t])
     if erros:
         st.caption("Planilhas do modelo diário com problema: " + "; ".join(f"{k} ({v})" for k, v in erros.items()))
 
@@ -2581,7 +2735,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "10/11/2026 · Labs · cabeçalho animado"
+VERSAO_PAINEL = "11/11/2026 · Labs · visual alinhado ao rádio"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
@@ -2596,8 +2750,6 @@ with _rodape, st.expander("🧩 Visualizações da tela inicial"):
         st.query_params.pop("vis", None)
         st.rerun()
     st.markdown('<div class="vs">★ padrão · ＋ visualização extra</div>', unsafe_allow_html=True)
-_rodape.markdown(f'<div class="vs" style="margin:2px 0 0">Versão do painel: {VERSAO_PAINEL} · Streamlit {st.__version__}</div>',
-                 unsafe_allow_html=True)
 with _rodape, st.expander("⚙ Atualizar dados"):
     pagina_atualizar()
 
@@ -2646,6 +2798,13 @@ e 200 mil cenários para a chance de cada meta. Semáforo dos programas: **prov�
 - **Dados mensais**: envie a planilha consolidada do ano. Meses novos entram na base; meses revisados substituem os antigos (e a versão anterior fica guardada).
 - Tudo o que é enviado aqui fica gravado no banco de dados do painel e registrado na auditoria.
 """)
+
+
+# faixa com a marca, no fim da página (depois de Atualizar dados e Notas), como no painel de rádio
+_rodape.markdown(f'<div class="rodape-marca"><img src="data:image/png;base64,{LOGO_B64}" alt="Rede Bahia"><div>'
+                 f'<b>Painel de Audiência · TV</b> · Rede Bahia · Pesquisa e Inteligência<br>'
+                 f'Fonte: Kantar IBOPE (Instar) · TT Domicílios · Grande Salvador · versão {VERSAO_PAINEL} · Streamlit {st.__version__}'
+                 f'</div></div>', unsafe_allow_html=True)
 
 
 # =================================================================================== ASSISTENTE (mini chat lateral)
