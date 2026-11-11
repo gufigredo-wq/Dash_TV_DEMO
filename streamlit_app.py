@@ -2677,10 +2677,12 @@ _CHAT_CSS = """
     background:linear-gradient(160deg, #2a78d6, #7b5cff); color:#fff;}
 .st-key-chat_painel .chat-tit {font-weight:700; font-size:.92rem; color:__TEXTO__;}
 .st-key-chat_painel .chat-sub {font-size:.7rem; color:__SUAVE__;}
-.st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) {flex:1 1 0; min-height:0;}
-.st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) [data-testid="stMarkdown"],
-.st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) [data-testid="stMarkdownContainer"] {height:100%;}
-.st-key-chat_painel .chat-msgs {height:100%; overflow-y:auto; padding:4px 2px; display:flex; flex-direction:column-reverse; gap:8px;}
+.st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) {flex:1 1 0; min-height:0; overflow:hidden;}
+.st-key-chat_painel [data-testid="stElementContainer"]:has(.chat-msgs) div:has(.chat-msgs) {height:100%; min-height:0;}
+.st-key-chat_painel .chat-msgs {height:100%; overflow-y:auto; overscroll-behavior:contain; padding:4px 6px 4px 2px;
+    display:flex; flex-direction:column-reverse; gap:8px; scrollbar-width:thin; scrollbar-color:__BORDA__ transparent;}
+.st-key-chat_painel .chat-msgs::-webkit-scrollbar {width:6px;}
+.st-key-chat_painel .chat-msgs::-webkit-scrollbar-thumb {background:__BORDA__; border-radius:3px;}
 .st-key-chat_sug {width:100% !important; max-width:100%; min-width:0;}
 .st-key-chat_sug [data-testid="stButtonGroup"] {width:100%; min-width:0;}
 .st-key-chat_sug div:has(> button) {flex-wrap:nowrap !important; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin;}
