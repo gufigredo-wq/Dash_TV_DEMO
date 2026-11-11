@@ -390,7 +390,7 @@ st.markdown(f"""<style>
     padding:8px 11px; font-size:.72rem; color:{TINTA2}; animation:subir .45s both;}}
 .mini b {{display:block; font-size:1.05rem; color:{TINTA}; margin-top:2px; font-variant-numeric:tabular-nums;}}
 .vivo {{display:inline-block; width:7px; height:7px; border-radius:50%; background:#00c2ff; margin-right:6px;
-    box-shadow:0 0 0 0 rgba(0,194,255,.6); animation:pulso 1.8s ease-in-out infinite; vertical-align:middle;}}
+    box-shadow:0 0 0 0 rgba(0,194,255,.6); animation:pulso 4s ease-in-out infinite; vertical-align:middle;}}
 /* ---------- animações dos gráficos ---------- */
 @keyframes barY {{ from {{transform:scaleY(0);}} to {{transform:scaleY(1);}} }}
 @keyframes barX {{ from {{transform:scaleX(0);}} to {{transform:scaleX(1);}} }}
@@ -450,13 +450,31 @@ header[data-testid="stHeader"] * {{pointer-events:none !important;}}
     background:linear-gradient(110deg, #001564 0%, #062a8c 55%, #0b3fae 100%); box-shadow:0 8px 24px rgba(0,21,100,.18);}}
 .st-key-topo::before {{content:""; position:absolute; inset:0; pointer-events:none;
     background:linear-gradient(105deg, transparent 35%, rgba(255,255,255,.10) 50%, transparent 65%);
-    background-size:200% 100%; animation:brilho 7s ease-in-out infinite;}}
+    background-size:200% 100%; animation:brilho 32s ease-in-out infinite;}}
 .st-key-topo::after {{content:""; position:absolute; left:0; right:0; bottom:0; height:3px;
-    background:linear-gradient(90deg, #00c2ff, #2a78d6, #7b5cff, #00c2ff); background-size:200% 100%; animation:brilho 6s linear infinite;}}
+    background:linear-gradient(90deg, #00c2ff, #2a78d6, #7b5cff, #00c2ff); background-size:200% 100%; animation:brilho 36s linear infinite;}}
 .st-key-topo [data-testid="stHorizontalBlock"] {{position:relative; z-index:1;}}
 .st-key-topo .marca {{display:flex; align-items:center; gap:14px;}}
 .st-key-topo .logo {{height:44px; width:auto; display:block; filter:drop-shadow(0 2px 6px rgba(0,0,0,.25));}}
 .st-key-topo .sep {{width:1px; height:36px; background:rgba(255,255,255,.25);}}
+.st-key-topo h1 .tela {{display:inline-flex; position:relative; width:30px; height:19px; margin-left:8px; vertical-align:-3px;
+    border:2px solid rgba(255,255,255,.75); border-radius:4px; overflow:hidden; background:#0b1430;
+    box-shadow:0 0 10px rgba(0,194,255,.35), inset 0 0 6px rgba(0,0,0,.6);}}
+.st-key-topo h1 .tela::after {{content:""; position:absolute; left:50%; bottom:-6px; width:12px; height:3px; transform:translateX(-50%);
+    background:rgba(255,255,255,.6); border-radius:2px;}}
+.st-key-topo h1 .tela i {{flex:1; height:100%; animation:cor 9s ease-in-out infinite;}}
+.st-key-topo h1 .tela i:nth-child(1) {{background:#e8e8e8;}}
+.st-key-topo h1 .tela i:nth-child(2) {{background:#f2d43a; animation-delay:-1.3s;}}
+.st-key-topo h1 .tela i:nth-child(3) {{background:#35c9d8; animation-delay:-2.6s;}}
+.st-key-topo h1 .tela i:nth-child(4) {{background:#3fbf4f; animation-delay:-3.9s;}}
+.st-key-topo h1 .tela i:nth-child(5) {{background:#c44bc0; animation-delay:-5.2s;}}
+.st-key-topo h1 .tela i:nth-child(6) {{background:#d9433b; animation-delay:-6.5s;}}
+.st-key-topo h1 .tela i:nth-child(7) {{background:#2a4fd6; animation-delay:-7.8s;}}
+.st-key-topo h1 .tela b {{position:absolute; left:0; right:0; top:-30%; height:30%; pointer-events:none;
+    background:linear-gradient(180deg, transparent, rgba(255,255,255,.55), transparent); animation:varredura 5.5s linear infinite;}}
+@keyframes cor {{ 0%,100% {{filter:brightness(.75) saturate(.8);}} 50% {{filter:brightness(1.12) saturate(1.1);}} }}
+@keyframes varredura {{ from {{top:-30%;}} to {{top:110%;}} }}
+.st-key-topo canvas.sinal {{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:0;}}
 .st-key-topo h1 {{font-size:1.15rem; font-weight:700; margin:0; padding:0; color:#fff !important; letter-spacing:.1px;}}
 .st-key-topo .sub {{font-size:.78rem; color:#b9c6ea !important; margin-top:2px;}}
 .st-key-topo .meta {{font-size:.74rem; color:#b9c6ea !important; text-align:right; line-height:1.5;}}
@@ -813,6 +831,48 @@ _EFEITOS_JS = r"""
     ms.forEach(m => { if (m.type === "characterData" && m.target.parentElement?.matches(".kpi .v, .anel .gv, .gtxt .gf > b")) conta(m.target.parentElement); });
   }).observe(D.body, {childList: true, subtree: true, characterData: true});
   varre(D);
+
+  // ---- cabeçalho: sinal de transmissão (arcos saindo de uma antena) e varredura de tela, bem lentos
+  const calmo = P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function sinal() {
+    const topo = D.querySelector(".st-key-topo");
+    if (!topo) { setTimeout(sinal, 400); return; }
+    if (topo.querySelector("canvas.sinal")) return;
+    const c = D.createElement("canvas");
+    c.className = "sinal";
+    topo.prepend(c);
+    const ctx = c.getContext("2d");
+    let t = 0;
+    function desenha() {
+      if (!c.isConnected) { setTimeout(sinal, 400); return; }
+      const w = c.clientWidth, h = c.clientHeight, dpr = P.devicePixelRatio || 1;
+      if (c.width !== w * dpr || c.height !== h * dpr) { c.width = w * dpr; c.height = h * dpr; }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      const ax = w * .55, ay = h * .5;                      // a antena fica no meio, entre o título e os botões
+      for (let k = 0; k < 5; k++) {                          // arcos que nascem na antena e se afastam devagar
+        const fase = ((t * .045) + k / 5) % 1, r = 14 + fase * w * .5, alfa = .16 * (1 - fase);
+        ctx.beginPath();
+        ctx.arc(ax, ay, r, -Math.PI * .22, Math.PI * .22);
+        ctx.strokeStyle = `rgba(120,200,255,${alfa})`; ctx.lineWidth = 1.4; ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(ax, ay, r, Math.PI * .78, Math.PI * 1.22);
+        ctx.strokeStyle = `rgba(160,140,255,${alfa})`; ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(120,200,255,.35)";               // a antena: um ponto que pulsa
+      ctx.beginPath(); ctx.arc(ax, ay, 2.2 + Math.sin(t * .8) * .6, 0, Math.PI * 2); ctx.fill();
+      const yv = ((t * 7) % (h + 40)) - 20;                  // varredura horizontal de tela
+      const g = ctx.createLinearGradient(0, yv - 14, 0, yv + 14);
+      g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(.5, "rgba(255,255,255,.05)"); g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g; ctx.fillRect(0, yv - 14, w, 28);
+      ctx.fillStyle = "rgba(255,255,255,.018)";              // linhas de tela, bem leves
+      for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
+      if (!D.hidden) t += .012;
+      if (!calmo) requestAnimationFrame(desenha);
+    }
+    desenha();
+  }
+  sinal();
 })();
 """
 _rodar_js("<script>const D = window.parent.document; if (!window.parent.__efeitosPainel) { const s = D.createElement('script'); "
@@ -857,7 +917,7 @@ with st.container(key="topo"):
     _corte_cab = _corte_diario(_fx_cab)
     _c = st.columns([5.6, 2.5, 1.15, 1.15], vertical_alignment="center", gap="small")
     _c[0].markdown(f"""<div class="marca"><img class="logo" alt="Rede Bahia" src="data:image/png;base64,{LOGO_B64}">
-<div class="sep"></div><div><h1>Painel de Audiência · TV</h1>
+<div class="sep"></div><div><h1>Painel de Audiência · TV <span class="tela" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b></b></span></h1>
 <div class="sub">Globo · TV Bahia · Faixa 6h às 24h e programas locais · TT Domicílios · Grande Salvador · Kantar IBOPE (Instar)</div></div></div>""",
                    unsafe_allow_html=True)
     _c[1].markdown(f"""<div class="meta"><span class="vivo"></span>Dados mensais até <b>{rot_mes(_ult_mes) if _ult_mes is not None else '–'}</b><br>
@@ -2519,7 +2579,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "09/11/2026 · Labs · animações ao trocar de programa"
+VERSAO_PAINEL = "10/11/2026 · Labs · cabeçalho animado"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
