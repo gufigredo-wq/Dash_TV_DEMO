@@ -236,6 +236,9 @@ def gera(destino="."):
     """Cria destino/dados/... e destino/parametros_tv.json com dados fictícios."""
     _gera_mensal(destino, np.random.default_rng(20261021))
     _gera_diario(destino)
+    import concorrencia                       # concorrentes fictícios coerentes com a base da TV Bahia
+    base = tv.ler_base(os.path.join(destino, "dados", "tv_mensal.csv"))
+    concorrencia.gera_demo(base).to_csv(os.path.join(destino, "dados", "tv_concorrencia.csv"), index=False)
 
 
 def _gera_diario(destino):
