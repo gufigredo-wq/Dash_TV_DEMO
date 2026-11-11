@@ -22,6 +22,8 @@ for _k, _v in {"theme.base": "light", "theme.primaryColor": "#2a78d6", "theme.ba
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 import tv  # noqa: E402
 import diario  # noqa: E402
+from streamlit.errors import StreamlitAPIException  # noqa: E402
+import concorrencia  # noqa: E402  (concorrência: planilha, leitura e dados fictícios)
 import chat  # noqa: E402  (assistente do painel: fase 1, respostas prontas)
 import banco  # noqa: E402  (banco de dados da empresa, opcional: sem conexão configurada, lê os arquivos de dados/)
 
@@ -256,6 +258,11 @@ ul.resumo .ic {{flex:none; width:22px; height:22px; border-radius:7px; display:g
 ul.resumo .ic.sobe {{background:color-mix(in srgb, {SOBE} 16%, transparent); color:{SOBE};}}
 ul.resumo .ic.desce {{background:color-mix(in srgb, {DESCE} 16%, transparent); color:{DESCE};}}
 ul.resumo .ic.neutro {{background:color-mix(in srgb, #2a78d6 14%, transparent); color:#2a78d6;}}
+.med {{display:inline-grid; place-items:center; min-width:26px; height:20px; padding:0 4px; border-radius:999px; font-size:.7rem;
+    font-weight:700; color:#fff;}}
+.med.m1 {{background:linear-gradient(135deg,#f5c542,#d79a00);}}
+.med.m2 {{background:linear-gradient(135deg,#c9ced8,#8f97a6);}}
+.med.m3 {{background:linear-gradient(135deg,#e3a27a,#b06a3b);}}
 /* tabelas no padrão do painel */
 table.rk td.vazio {{color:{CINZA};}}
 /* rodapé com a marca */
@@ -1059,7 +1066,7 @@ _fx[0].segmented_control("Faixa horária de referência", diario.FAIXAS, default
                               "programas, e as Projeções mostram o modelo diário dessa faixa.")
 _fx[1].markdown(f'<div class="vs" style="margin-top:30px">Faixa em uso: <b>{st.session_state.get("faixa_ref") or tv.FAIXA}</b> · '
                 f'TV Bahia (Globo) · Grande Salvador</div>', unsafe_allow_html=True)
-paginas = st.tabs(["Visão geral", "Projeções e metas"])
+paginas = st.tabs(["Visão geral", "Projeções e metas", "Concorrência"])
 
 
 # =================================================================================== PÁGINA 1 · VISÃO GERAL
@@ -2371,6 +2378,270 @@ with paginas[1]:
         pagina_resultados()
 
 
+# =================================================================================== PÁGINA · CONCORRÊNCIA
+ARQ_CONC = os.path.join("dados", "tv_concorrencia.csv")
+CORES_CONC = ["#eb6834", "#7b5cff", "#1baf7a", "#e87ba4", "#eda100", "#00a3a3", "#c0504d", "#8c564b"]
+
+
+@st.cache_data(show_spinner=False)
+def carregar_conc(assinatura=None):
+    if _banco_ativo():
+        d = banco.ler("tv_concorrencia").reindex(columns=concorrencia.COLUNAS)
+    elif os.path.exists(ARQ_CONC):
+        d = concorrencia.ler_csv(ARQ_CONC)
+    else:
+        d = pd.DataFrame(columns=concorrencia.COLUNAS)
+    d["mes"] = pd.to_datetime(d["mes"])
+    for c in ("rat", "shr"):
+        d[c] = pd.to_numeric(d[c], errors="coerce")
+    return d
+
+
+def _assinatura_conc():
+    if _banco_ativo():
+        return ("banco",) + banco.assinatura(["tv_concorrencia"])
+    return (os.path.getmtime(ARQ_CONC), os.path.getsize(ARQ_CONC)) if os.path.exists(ARQ_CONC) else ()
+
+
+try:
+    CONC, _ERRO_CONC = carregar_conc(_assinatura_conc()), None
+except Exception as _ex:                      # tabela ainda não criada no banco: a aba avisa, o resto do painel segue
+    CONC, _ERRO_CONC = pd.DataFrame(columns=concorrencia.COLUNAS), _ex.__class__.__name__
+
+
+def cor_emissora(e, ordem):
+    if e == concorrencia.TV_BAHIA:
+        return AZUL
+    if e == concorrencia.OUTRAS:
+        return CINZA
+    outras = [x for x in ordem if x not in (concorrencia.TV_BAHIA, concorrencia.OUTRAS)]
+    return CORES_CONC[outras.index(e) % len(CORES_CONC)] if e in outras else CINZA
+
+
+def rot_recorte(r):
+    return r if r in diario.FAIXAS else f"Horário do {r}"
+
+
+def _onde(rec):
+    """'na faixa 6h às 24h' ou 'no horário do BATV' (o nome do programa fica como está)."""
+    return f"na faixa {rec}" if rec in diario.FAIXAS else f"no horário do {rec}"
+
+
+def _medalha(pos):
+    return f"<span class='med m{pos}'>{pos}º</span>" if pos <= 3 else f"<span class='med' style='color:{TINTA2}'>{pos}º</span>"
+
+
+def pagina_concorrencia():
+    if CONC.empty:
+        secao(1, "Concorrência", "audiência e share de cada emissora, por faixa e por horário dos programas")
+        msg = (f"A tabela de concorrência ainda não existe no banco ({_ERRO_CONC}); peça à TI para criá-la "
+               "(`python carga_banco.py --url ... --criar`)." if _ERRO_CONC else "Ainda não há dados de concorrência.")
+        st.info(msg + " Baixe a planilha modelo, preencha com o ranking de emissoras do Instar e envie em "
+                      "**⚙ Atualizar dados → 7 · Concorrência**, no rodapé.")
+        st.download_button("⬇️ Baixar planilha modelo", concorrencia.modelo_xlsx(), "modelo_concorrencia_tv.xlsx",
+                           key="cc_modelo_vazio")
+        return
+    recs = [r for r in tv.PROGRAMAS if r in set(CONC["recorte"])]
+    f = st.columns([1.5, 1.1, 2.9, 2.0])
+    padrao = faixa_atual() if faixa_atual() in recs else recs[0]
+    if st.session_state.get("cc_rec") not in recs:
+        st.session_state["cc_rec"] = padrao
+    rec = f[0].selectbox("Recorte", recs, key="cc_rec", format_func=rot_recorte,
+                         help="A faixa inteira ou o horário de um programa local (o que cada emissora marcou naquele horário).")
+    met = f[1].selectbox("Métrica", ["Share", "Audiência"], key="cc_met", format_func=lambda m: f"{m} ({tv.SIGLA[m]})")
+    col, un, suf = ("shr", "p.p.", "%") if met == "Share" else ("rat", "pt", "")
+    D = CONC[CONC["recorte"] == rec]
+    ult = D["mes"].max()
+    ordem = list(D[D["mes"] == ult].sort_values("shr", ascending=False)["emissora"])
+    ordem += [e for e in D["emissora"].unique() if e not in ordem]
+    todas = [e for e in ordem]
+    chave_ems = "cc_ems_" + _chave_slug(rec)
+    ems = f[2].multiselect("Emissoras", todas, default=todas, key=chave_ems, placeholder="Escolha as emissoras")
+    meses = sorted(D["mes"].unique())
+    p0, p1 = f[3].select_slider("Período", options=meses, value=(meses[max(0, len(meses) - 13)], meses[-1]),
+                                format_func=rot_mes, key="cc_per")
+    st.session_state["_filtros_cc_txt"] = (f"Concorrência · {rot_recorte(rec)} · {met.lower()} · {rot_mes(p0)} a {rot_mes(p1)}")
+    if not ems:
+        st.warning("Escolha ao menos uma emissora.")
+        return
+    P = D[(D["mes"] >= p0) & (D["mes"] <= p1) & D["emissora"].isin(ems)]
+    piv = P.pivot_table(index="mes", columns="emissora", values=col).reindex(columns=[e for e in ordem if e in ems])
+    rank_ems = [e for e in ordem if e != concorrencia.OUTRAS]
+    U = D[D["mes"] == ult].set_index("emissora")
+    A = D[D["mes"] == ult - pd.DateOffset(years=1)].set_index("emissora")
+    tvb = concorrencia.TV_BAHIA
+
+    # ---- 1. posição no último mês
+    secao(1, "Posição no último mês", f"{rot_recorte(rec)} · {rot_mes(ult)} · {met.lower()}")
+    pos_lista = [e for e in U.sort_values(col, ascending=False).index if e != concorrencia.OUTRAS]
+    vice = next((e for e in pos_lista if e != tvb), None)
+    lista = []
+    if tvb in U.index:
+        pos = pos_lista.index(tvb) + 1
+        s_tvb = D[D["emissora"] == tvb].set_index("mes")[col].sort_index()
+        lista.append((f"{tvb} · {rot_mes(ult)}", f"{br(U.loc[tvb, col])}{suf}",
+                      f"<b>{pos}º</b> de {len(pos_lista)} · " + _dpt(U.loc[tvb, col], A[col].get(tvb)).replace(" pt", f" {un}")
+                      + f" vs {rot_mes(ult - pd.DateOffset(years=1))}", AZUL, s_tvb.iloc[-13:].tolist()))
+    if vice:
+        s_v = D[D["emissora"] == vice].set_index("mes")[col].sort_index()
+        lista.append((f"{'Vice' if pos_lista[0] == tvb else 'Líder'} · {vice}", f"{br(U.loc[vice, col])}{suf}",
+                      _dpt(U.loc[vice, col], A[col].get(vice)).replace(" pt", f" {un}") + f" vs {rot_mes(ult - pd.DateOffset(years=1))}",
+                      cor_emissora(vice, ordem), s_v.iloc[-13:].tolist()))
+    if tvb in U.index and vice:
+        van = U.loc[tvb, col] - U.loc[vice, col]
+        van_a = (A[col].get(tvb) - A[col][[e for e in A.index if e not in (tvb, concorrencia.OUTRAS)]].max()
+                 if tvb in A.index and len(A) > 1 else None)
+        hist = []
+        for m_, g in D.groupby("mes"):
+            g = g.set_index("emissora")[col]
+            if tvb in g.index and len(g.drop([tvb, concorrencia.OUTRAS], errors="ignore")):
+                hist.append(g[tvb] - g.drop([tvb, concorrencia.OUTRAS], errors="ignore").max())
+        lista.append(("Vantagem sobre a 2ª" if van >= 0 else "Distância para a líder", f"{sinal(van)} {un}",
+                      (_dpt(van, van_a).replace(" pt", f" {un}") + " vs um ano antes") if van_a is not None else "–",
+                      VERDE if van >= 0 else VERMELHO, hist[-13:]))
+    conc_soma = U.drop([tvb, concorrencia.OUTRAS], errors="ignore")[col].sum()
+    lista.append(("Concorrentes somadas", f"{br(conc_soma)}{suf}", f"{len(U.drop([tvb, concorrencia.OUTRAS], errors='ignore'))} emissoras"
+                  + (f" · outras: {br(U.loc[concorrencia.OUTRAS, col])}{suf}" if concorrencia.OUTRAS in U.index else ""), CINZA))
+    kpis(lista)
+    frases = []
+    if tvb in U.index and vice:
+        if pos_lista[0] == tvb:
+            frases.append(f"A <b>{tvb}</b> lidera {_onde(rec)} "
+                          f"em {rot_mes(ult)}, com <b>{br(U.loc[tvb, col])}{suf}</b> de {met.lower()}: "
+                          f"{br(abs(van))} {un} acima da <b>{vice}</b>.")
+        else:
+            frases.append(f"Em {rot_mes(ult)}, a <b>{pos_lista[0]}</b> lidera {_onde(rec)} com "
+                          f"<b>{br(U.loc[pos_lista[0], col])}{suf}</b>; a {tvb} está {br(abs(van))} {un} abaixo.")
+        if van_a is not None:
+            d = van - van_a
+            if abs(d) >= .005:
+                frases.append(f"A vantagem sobre a 2ª colocada {'aumentou' if d > 0 else 'diminuiu'}: {'alta' if d > 0 else 'queda'} de "
+                              f"{br(abs(d))} {un} vs {rot_mes(ult - pd.DateOffset(years=1))}.")
+    var = [(e, U.loc[e, col] - A.loc[e, col]) for e in rank_ems if e in U.index and e in A.index and e != tvb]
+    if var:
+        e_up = max(var, key=lambda x: x[1])
+        e_dn = min(var, key=lambda x: x[1])
+        if e_up[1] > 0:
+            frases.append(f"Entre as concorrentes, a maior alta vs um ano antes foi da <b>{e_up[0]}</b> ({sinal(e_up[1])} {un})"
+                          + (f"; a maior queda, da <b>{e_dn[0]}</b> ({sinal(e_dn[1])} {un})." if e_dn[1] < 0 else "."))
+    if frases:
+        with cartao("Resumo", f"{rot_recorte(rec)} · {rot_mes(ult)}"):
+            st.markdown('<ul class="resumo">' + "".join(
+                f'<li><span class="ic {_icone_resumo(f_)[1]}">{_icone_resumo(f_)[0]}</span><span>{f_}</span></li>' for f_ in frases)
+                + "</ul>", unsafe_allow_html=True)
+
+    # ---- 2. evolução
+    secao(2, "Evolução", f"{rot_mes(p0)} a {rot_mes(p1)} · emissoras selecionadas")
+    c1, c2 = st.columns([1.35, 1])
+    with c1, cartao(f"{met} por emissora", f"{tv.SIGLA[met]} · {rot_recorte(rec)}"):
+        fig = go.Figure()
+        x = [rot_mes(m) for m in piv.index]
+        for e in piv.columns:
+            destaque = e == tvb
+            fig.add_scatter(x=x, y=piv[e].values, name=e, mode="lines+markers",
+                            line=dict(color=cor_emissora(e, ordem), width=3.2 if destaque else 1.8,
+                                      dash="dot" if e == concorrencia.OUTRAS else "solid"),
+                            marker=dict(size=6 if destaque else 4),
+                            hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y:.2f}}{suf}<extra></extra>")
+        layout(fig, 330, legenda=True)
+        fig.update_xaxes(tickangle=-45 if len(x) > 8 else 0, tickfont=dict(size=10))
+        st.plotly_chart(fig, config=CFG, key="cc_linhas")
+    with c2, cartao("Divisão do share", f"Shr% · {rot_recorte(rec)} · cada barra soma o total enviado"):
+        ps = P.pivot_table(index="mes", columns="emissora", values="shr").reindex(columns=[e for e in ordem if e in ems])
+        fig = go.Figure()
+        for e in ps.columns:
+            fig.add_bar(x=[rot_mes(m) for m in ps.index], y=ps[e].values, name=e, marker_color=cor_emissora(e, ordem),
+                        hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y:.1f}}%<extra></extra>")
+        layout(fig, 330, legenda=True).update_layout(barmode="stack", bargap=.18)
+        fig.update_yaxes(ticksuffix="%", tickformat=",.0f")
+        fig.update_xaxes(tickangle=-45 if len(ps) > 8 else 0, tickfont=dict(size=10))
+        st.plotly_chart(fig, config=CFG, key="cc_divisao")
+
+    # ---- 3. vantagem e ranking
+    secao(3, "Vantagem e ranking", "a TV Bahia contra a 2ª colocada mês a mês e o ranking do último mês")
+    c1, c2 = st.columns([1, 1.1])
+    with c1, cartao("Vantagem sobre a 2ª colocada", f"{tv.SIGLA[met]} da TV Bahia − melhor concorrente, em {un}"):
+        xs, ys, quem = [], [], []
+        for m_ in piv.index:
+            g = D[D["mes"] == m_].set_index("emissora")[col]
+            rivais = g.drop([tvb, concorrencia.OUTRAS], errors="ignore")
+            if tvb in g.index and len(rivais):
+                xs.append(rot_mes(m_)); ys.append(g[tvb] - rivais.max()); quem.append(rivais.idxmax())
+        fig = go.Figure()
+        fig.add_bar(x=xs, y=ys, marker_color=[VERDE if v >= 0 else VERMELHO for v in ys], customdata=quem,
+                    text=[sinal(v, 1) for v in ys], textposition="outside", textfont=dict(size=9), cliponaxis=False,
+                    hovertemplate="%{x}: %{y:+.2f} " + un + " vs %{customdata}<extra></extra>")
+        layout(fig, 300)
+        fig.update_xaxes(tickangle=-45 if len(xs) > 8 else 0, tickfont=dict(size=10))
+        st.plotly_chart(fig, config=CFG, key="cc_vantagem")
+    with c2, cartao(f"Ranking · {rot_mes(ult)}", f"{rot_recorte(rec)} · Δ vs {rot_mes(ult - pd.DateOffset(years=1))}"):
+        def _d(a, b, u):
+            if b is None or pd.isna(b) or pd.isna(a):
+                return "<td class='n' style='color:#8a8984'>–</td>"
+            return f"<td class='n' style='color:{SOBE if a > b else DESCE}'>{sinal(a - b)}</td>"
+        mx = U["shr"].max() or 1
+        linhas = ""
+        ordem_rk = [e for e in U.sort_values(col, ascending=False).index if e != concorrencia.OUTRAS]
+        ordem_rk += [concorrencia.OUTRAS] if concorrencia.OUTRAS in U.index else []        # o agregado vai sempre por último
+        for k, e in enumerate(ordem_rk):
+            eh_outras = e == concorrencia.OUTRAS
+            pos = "" if eh_outras else _medalha(pos_lista.index(e) + 1)
+            barra = (f"<div style='height:8px; width:{U.loc[e, 'shr'] / mx * 100:.0f}%; background:{cor_emissora(e, ordem)}; "
+                     f"border-radius:4px'></div>")
+            estilo = f" style='background:{REALCE}'" if e == tvb else ""
+            linhas += (f"<tr{estilo}><td>{pos}</td><td><span style='color:{cor_emissora(e, ordem)}'>■</span> "
+                       f"{'<b>' + e + '</b>' if e == tvb else e}</td>"
+                       f"<td class='n'>{br(U.loc[e, 'rat'])}</td>{_d(U.loc[e, 'rat'], A['rat'].get(e), 'pt')}"
+                       f"<td class='n'><b>{br(U.loc[e, 'shr'])}%</b></td>{_d(U.loc[e, 'shr'], A['shr'].get(e), 'p.p.')}"
+                       f"<td style='min-width:70px'>{barra}</td></tr>")
+        st.markdown("<div style='overflow-x:auto'><table class='rk'><tr><th></th><th>Emissora</th><th class='n'>Aud.</th>"
+                    "<th class='n'>Δ aud.</th><th class='n'>Share</th><th class='n'>Δ share</th><th></th></tr>"
+                    f"{linhas}</table></div>", unsafe_allow_html=True)
+
+    # ---- 4. por horário
+    U_all = CONC[CONC["mes"] == ult]
+    recs_u = [r for r in tv.PROGRAMAS if r in set(U_all["recorte"])]
+    if len(recs_u) > 1:
+        secao(4, "Por horário", f"todos os recortes em {rot_mes(ult)} · onde a TV Bahia é mais forte e onde a disputa aperta")
+        c1, c2 = st.columns([1.25, 1])
+        mat = U_all.pivot_table(index="recorte", columns="emissora", values=col).reindex(index=recs_u)
+        cols_m = [e for e in ordem if e in mat.columns] + [e for e in mat.columns if e not in ordem]
+        mat = mat[cols_m]
+        with c1, cartao(f"{met} por horário e emissora", f"{tv.SIGLA[met]} · {rot_mes(ult)}"):
+            fig = go.Figure(go.Heatmap(z=mat.values, x=cols_m, y=[rot_recorte(r) for r in mat.index], colorscale=SEQ,
+                                       text=[[br(v) if pd.notna(v) else "" for v in linha] for linha in mat.values],
+                                       texttemplate="%{text}", textfont=dict(size=10), showscale=False, xgap=2, ygap=2,
+                                       hovertemplate="%{y} · %{x}: %{z:.2f}" + suf + "<extra></extra>"))
+            layout(fig, 40 + 28 * len(recs_u))
+            fig.update_yaxes(autorange="reversed", tickformat="", gridcolor="rgba(0,0,0,0)")
+            fig.update_xaxes(side="top", tickfont=dict(size=10))
+            st.plotly_chart(fig, config=CFG, key="cc_calor")
+        with c2, cartao("Vantagem por horário", f"TV Bahia − melhor concorrente · {un} · {rot_mes(ult)}"):
+            itens = []
+            for r in recs_u:
+                g = U_all[U_all["recorte"] == r].set_index("emissora")[col]
+                rivais = g.drop([tvb, concorrencia.OUTRAS], errors="ignore")
+                if tvb in g.index and len(rivais):
+                    itens.append((rot_recorte(r), g[tvb] - rivais.max(), rivais.idxmax()))
+            itens.sort(key=lambda x: x[1])
+            fig = go.Figure()
+            fig.add_bar(y=[i[0] for i in itens], x=[i[1] for i in itens], orientation="h", customdata=[i[2] for i in itens],
+                        marker_color=[VERDE if i[1] >= 0 else VERMELHO for i in itens],
+                        text=[sinal(i[1], 1) for i in itens], textposition="outside", textfont=dict(size=10), cliponaxis=False,
+                        hovertemplate="%{y}: %{x:+.2f} " + un + " vs %{customdata}<extra></extra>")
+            layout(fig, 40 + 28 * len(itens))
+            fig.update_yaxes(tickformat="")
+            st.plotly_chart(fig, config=CFG, key="cc_van_horario")
+    st.markdown(f'<div class="rodape">Fonte: Kantar IBOPE (Instar), ranking de emissoras · TT Domicílios · Grande Salvador. '
+                f'Recorte "Horário do programa" = o que cada emissora marcou no horário daquele programa local. '
+                f'"{concorrencia.OUTRAS}" agrega TV paga e demais canais e fica fora do ranking.</div>', unsafe_allow_html=True)
+
+
+with paginas[2]:
+    st.session_state["_aba_atual"] = "Concorrência"
+    pagina_concorrencia()
+
+
 # =================================================================================== PÁGINA 5 · ATUALIZAR DADOS
 @protegido("rodada_diaria.excluir", "tv_rodadas", detalhe=lambda nome, *a, **k: dict(recurso_id=nome))
 def _excluir_rodada_diaria(nome):
@@ -2447,6 +2718,21 @@ def _recarrega(msg):
     st.session_state["msg_ok"] = msg
     st.session_state["up_nonce"] = st.session_state.get("up_nonce", 0) + 1
     st.rerun()
+
+
+@protegido("concorrencia.upload", "tv_concorrencia", detalhe=lambda novo, m, nome, *a, **k: dict(recurso_id=nome))
+def _salvar_conc(novo, mesclada, nome):
+    """Grava a concorrência: no banco (só as linhas enviadas, pela chave) ou, na demonstração, no CSV local."""
+    if _banco_ativo():
+        try:
+            banco.gravar("tv_concorrencia", novo)
+            return True
+        except Exception as ex:
+            st.session_state["msg_erro"] = f"Não consegui gravar no banco de dados ({ex.__class__.__name__})."
+            return False
+    os.makedirs(os.path.dirname(ARQ_CONC), exist_ok=True)
+    mesclada.to_csv(ARQ_CONC, index=False)
+    return None
 
 
 def pagina_atualizar():
@@ -2673,6 +2959,35 @@ def pagina_atualizar():
                     _salvar_base(tv.ler_base(b), f"restaurada a versão de {rot(b)}")
                     _recarrega(f"Versão de {rot(b)} restaurada.")
 
+    # ---- 7. concorrência
+    with cartao("7 · Concorrência",
+                "planilha modelo: Mês, Recorte (faixa ou programa = horário do programa), Emissora, Rat%, Shr% · .xlsx ou .csv. "
+                "Mês+recorte+emissora já existentes são substituídos."):
+        cc = st.columns([1, 3])
+        cc[0].download_button("⬇️ Planilha modelo", concorrencia.modelo_xlsx(), "modelo_concorrencia_tv.xlsx", key="cc_modelo")
+        if len(CONC):
+            cc[1].markdown(f'<div class="vs" style="margin-top:8px">No painel: {len(CONC):,} linhas · '
+                           f'{CONC["emissora"].nunique()} emissoras · {CONC["recorte"].nunique()} recortes · '
+                           f'{rot_mes(CONC["mes"].min())} a {rot_mes(CONC["mes"].max())}</div>'.replace(",", "."), unsafe_allow_html=True)
+        up = st.file_uploader("Planilha de concorrência", type=["xlsx", "csv"], key=f"up_cc_{N}")
+        if up is not None:
+            try:
+                novo, avisos = concorrencia.ler_planilha(up, up.name)
+                for a in avisos:
+                    st.warning(a)
+                if not novo.empty:
+                    m, n, a = concorrencia.mesclar(CONC, novo)
+                    st.markdown(f"<div class='leitura'>{len(novo)} linhas · {novo['emissora'].nunique()} emissoras · "
+                                f"{novo['recorte'].nunique()} recortes · {rot_mes(novo['mes'].min())} a {rot_mes(novo['mes'].max())} · "
+                                f"<b>{n}</b> novas · <b>{a}</b> alteradas</div>", unsafe_allow_html=True)
+                    if st.button("Gravar concorrência", type="primary", key="bt_cc", disabled=not (n or a)):
+                        if not _permissao_ok("pw_cc"):
+                            st.error("Seu perfil permite apenas consulta.")
+                        elif _salvar_conc(novo, m, up.name) is not False:
+                            _recarrega(f"Concorrência atualizada: {n} linhas novas, {a} alteradas.")
+            except Exception as ex:
+                st.error(f"Não consegui ler a planilha: {ex}")
+
 
 # =================================================================================== relatório em PDF
 st.session_state["_graf"] = st.session_state.get("_graf_run", [])
@@ -2707,6 +3022,11 @@ def janela_pdf():
 
     st.markdown("**Visão geral**")
     escolhidos, cartoes = _itens("Visão geral", True, "pdf_vg")
+    if any(g["aba"] == "Concorrência" for g in graf):
+        st.markdown("**Concorrência**")
+        if st.toggle("Incluir a concorrência no relatório", value=False, key="pdf_cc"):
+            cc_g, cc_c = _itens("Concorrência", True, "pdf_cc_i")
+            escolhidos, cartoes = escolhidos + cc_g, cartoes + cc_c
     proj_g, proj_c = [], []
     if any(g["aba"] == "Projeções e metas" for g in graf):
         st.markdown("**Projeções e metas**")
@@ -2735,7 +3055,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "11/11/2026 · Labs · visual alinhado ao rádio"
+VERSAO_PAINEL = "11/11/2026 · Labs · concorrência e assistente PIPECO"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
@@ -3012,7 +3332,10 @@ def assistente():
             msgs.append(_chat_responde(pendente))
             del msgs[1:-40]               # guarda só as últimas mensagens da sessão
             st.session_state["chat_pendente"] = None
-            st.rerun(scope="fragment")
+            try:
+                st.rerun(scope="fragment")            # atualiza só o quadro do chat
+            except StreamlitAPIException:            # a resposta chegou durante uma recarga do painel inteiro
+                st.rerun()
 
 
 assistente()
