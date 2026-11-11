@@ -5,8 +5,8 @@
 
 No repositório do rádio carrega: dados/*.xlsx e radio_movel.csv (radio_audiencia), dados/demografico/*.xlsx
 (radio_demografico) e parametros.json (painel_parametros, painel='radio').
-No repositório da TV carrega: dados/tv_mensal.csv (tv_audiencia_mensal), dados/diario/*.xlsx (tv_audiencia_diaria),
-dados/rodadas/*.xlsx e dados/rodadas_diarias/*.xlsx (tv_rodadas) e
+No painel de TV carrega, de uma pasta dados/ local (fora do repositório): dados/tv_mensal.csv (tv_audiencia_mensal), dados/diario/*.xlsx (tv_audiencia_diaria),
+dados/rodadas/*.xlsx e dados/rodadas_diarias/*.xlsx (tv_rodadas), dados/concorrencia/*.xlsx|csv (tv_concorrencia) e
 parametros_tv.json (painel_parametros, painel='tv').
 A aplicação de carga da TI pode gravar direto nas mesmas tabelas (contrato em ESQUEMA_BANCO.md)."""
 import argparse
@@ -70,6 +70,14 @@ def carga_tv():
             pass
         banco.gravar_rodada(os.path.basename(a), open(a, "rb").read(), corte)
         print(f"tv_rodadas: {os.path.basename(a)}")
+    import concorrencia                                                           # concorrência (planilha modelo ou CSV)
+    for a in sorted(glob.glob(os.path.join("dados", "concorrencia", "*.xlsx")) + glob.glob(os.path.join("dados", "concorrencia", "*.csv"))
+                    + glob.glob(os.path.join("dados", "tv_concorrencia.csv"))):
+        try:
+            d = concorrencia.ler_csv(a) if os.path.basename(a) == "tv_concorrencia.csv" else concorrencia.ler_planilha(a, os.path.basename(a))[0]
+            print(f"tv_concorrencia: {banco.gravar('tv_concorrencia', d)} linhas ({os.path.basename(a)})")
+        except Exception as ex:
+            print(f"  {os.path.basename(a)}: não li como concorrência ({ex})")
     if os.path.exists("parametros_tv.json"):
         print(f"painel_parametros (tv): {banco.salvar_parametros('tv', json.load(open('parametros_tv.json', encoding='utf-8')))} chaves")
 
