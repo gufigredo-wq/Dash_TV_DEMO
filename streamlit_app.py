@@ -1,4 +1,5 @@
 import glob
+from html import escape as html_escape
 import json
 import os
 import shutil
@@ -2695,6 +2696,15 @@ _CHAT_CSS = """
 .st-key-chat_painel .msg .it::before {content:"•"; position:absolute; left:2px; opacity:.7;}
 .st-key-chat_painel [data-testid="stPills"] button {font-size:.7rem; padding:2px 9px; min-height:0;}
 .st-key-chat_painel [data-testid="stChatInput"] textarea {font-size:.82rem;}
+.st-key-chat_painel .msg .tt {display:block; margin:4px 0 2px;}
+.st-key-chat_painel .msg details.como {margin-top:7px; font-size:.7rem; opacity:.8;}
+.st-key-chat_painel .msg details.como summary {cursor:pointer; color:__SUAVE__;}
+.st-key-chat_painel .msg details.como ul {margin:4px 0 0; padding-left:16px;}
+.st-key-chat_painel .msg.digitando {display:flex; gap:4px; padding:11px 13px;}
+.st-key-chat_painel .msg.digitando i {width:6px; height:6px; border-radius:50%; background:__SUAVE__; animation:pulinho 1s infinite;}
+.st-key-chat_painel .msg.digitando i:nth-child(2) {animation-delay:.15s;}
+.st-key-chat_painel .msg.digitando i:nth-child(3) {animation-delay:.3s;}
+@keyframes pulinho {{ 0%,60%,100% {{transform:none; opacity:.5;}} 30% {{transform:translateY(-4px); opacity:1;}} }}
 .st-key-chat_painel .msg .sub {display:block; padding-left:12px; margin-top:2px; opacity:.85; font-size:.76rem;}
 .st-key-chat_painel [data-testid="stChatInput"] > div {background:__CAMPO__ !important; border-color:__BORDA__ !important;}
 .st-key-chat_painel [data-testid="stChatInput"] textarea {color:__TEXTO__ !important; -webkit-text-fill-color:__TEXTO__;}
@@ -2710,21 +2720,39 @@ for _k, _v in {"__FUNDO__": "#111a2e" if ESCURO else "#ffffff", "__BORDA__": "#2
 st.markdown(_CHAT_CSS, unsafe_allow_html=True)
 
 
+def _config_ia():
+    """Chave e modelo do Gemini: Secrets do Streamlit (demonstração) ou variáveis de ambiente (Labs). Sem chave: respostas prontas."""
+    def ler(nome):
+        try:
+            v = st.secrets.get(nome)
+        except Exception:                 # sem arquivo de secrets
+            v = None
+        return v or os.environ.get(nome)
+    return ler("GEMINI_API_KEY"), ler("GEMINI_MODELO") or chat.MODELO_PADRAO
+
+
+CHAT_CHAVE, CHAT_MODELO = _config_ia()
+CHAT_LIMITE = 30                          # perguntas à IA por sessão (controle de custo)
+
+
+def _chat_msgs():
+    msgs = st.session_state.setdefault("chat_msgs", [{"q": "bot", "t": chat.BOAS_VINDAS}])
+    for k, m in enumerate(msgs):          # sessões antigas guardavam tuplas
+        if isinstance(m, tuple):
+            msgs[k] = {"q": m[0], "t": m[1]}
+    return msgs
+
+
 def _chat_alterna():
     st.session_state["chat_aberto"] = not st.session_state.get("chat_aberto", False)
 
 
 def _chat_pergunta(txt):
-    txt = (txt or "").strip()
-    if not txt:
-        return
-    msgs = st.session_state.setdefault("chat_msgs", [("bot", chat.BOAS_VINDAS)])
-    try:
-        resp = chat.responder(txt, BASE, R)
-    except Exception:                 # uma pergunta com problema não derruba o painel
-        resp = "Tive um problema para calcular essa resposta. Tente perguntar de outro jeito."
-    msgs += [("eu", txt[:500]), ("bot", resp)]
-    del msgs[1:-40]                   # guarda só as últimas mensagens da sessão
+    """Só registra a pergunta; a resposta é calculada no fragmento (assim aparece o "digitando…")."""
+    txt = (txt or "").strip()[:500]
+    if txt and not st.session_state.get("chat_pendente"):
+        _chat_msgs().append({"q": "eu", "t": txt})
+        st.session_state["chat_pendente"] = txt
 
 
 def _chat_digitou():
@@ -2737,6 +2765,46 @@ def _chat_sugestao():
     _chat_pergunta(v)
 
 
+def _chat_fonte():
+    try:
+        diarias = carregar_diarias(_assinatura_diarias())[0]
+    except Exception:
+        diarias = {}
+    return chat.Fonte(BASE, R, diarias, demo=MODO_DEMO)
+
+
+def _chat_responde(txt):
+    msgs = _chat_msgs()
+    usadas = st.session_state.get("chat_usadas", 0)
+    if CHAT_CHAVE and usadas < CHAT_LIMITE:
+        historico = [(m["q"], m["t"]) for m in msgs[1:-1] if m.get("modo") != "erro"]
+        try:
+            resp, consultas = chat.perguntar_ia(txt, _chat_fonte(), CHAT_CHAVE, CHAT_MODELO, historico)
+            st.session_state["chat_usadas"] = usadas + 1
+            registra("assistente.pergunta", recurso_tipo="assistente", detalhe=f"{len(consultas)} consultas")
+            return {"q": "bot", "t": resp, "consultas": consultas, "modo": "ia"}
+        except Exception as ex:           # API fora, chave errada, limite do plano…: cai nas respostas prontas
+            aviso = f"*(A IA não respondeu agora: {ex.__class__.__name__}. Resposta automática:)*\n"
+            return {"q": "bot", "t": aviso + chat.responder(txt, BASE, R), "modo": "erro"}
+    extra = (f"*(Limite de {CHAT_LIMITE} perguntas à IA nesta sessão. Resposta automática:)*\n" if CHAT_CHAVE else "")
+    try:
+        return {"q": "bot", "t": extra + chat.responder(txt, BASE, R), "modo": "pronta"}
+    except Exception:
+        return {"q": "bot", "t": "Tive um problema para calcular essa resposta. Tente perguntar de outro jeito.", "modo": "erro"}
+
+
+def _bolha(m):
+    corpo = chat.para_html(m["t"])
+    if m.get("consultas"):
+        itens = "".join(f"<li>{html_escape(chat.descreve_consulta(c))}</li>" for c in m["consultas"])
+        corpo += f'<details class="como"><summary>Como cheguei nisso</summary><ul>{itens}</ul></details>'
+    return f'<div class="msg {m["q"]}">{corpo}</div>'
+
+
+SUGESTOES_IA = ["Destaques do último mês", "Quais programas correm risco de não bater a meta?",
+                "Como o BATV evoluiu em 2026?", "Compare o Jornal da Manhã com 2025", "Projeção da faixa 6h às 24h"]
+
+
 @st.fragment
 def assistente():
     aberto = st.session_state.get("chat_aberto", False)
@@ -2745,14 +2813,24 @@ def assistente():
         if aberto:
             st.markdown('<span class="chat-aberto"></span>', unsafe_allow_html=True)
     with st.container(key="chat_painel"):
-        msgs = st.session_state.setdefault("chat_msgs", [("bot", chat.BOAS_VINDAS)])
-        bolhas = "".join(f'<div class="msg {q}">{chat.para_html(t)}</div>' for q, t in reversed(msgs))
-        st.markdown('''<div class="chat-cab"><div class="chat-ico">💬</div><div><div class="chat-tit">Assistente do painel</div>
-<div class="chat-sub">versão inicial · respostas prontas a partir dos dados do painel</div></div></div>''',
-                    unsafe_allow_html=True)
-        st.markdown(f'<div class="chat-msgs">{bolhas}</div>', unsafe_allow_html=True)
-        st.pills("Sugestões", chat.SUGESTOES, key="chat_sug", on_change=_chat_sugestao, label_visibility="collapsed")
-        st.chat_input("Pergunte sobre a audiência…", key="chat_txt", on_submit=_chat_digitou, max_chars=500)
+        msgs = _chat_msgs()
+        pendente = st.session_state.get("chat_pendente")
+        modo = (f"IA · {CHAT_MODELO} · consulta os dados do painel" if CHAT_CHAVE
+                else "respostas prontas a partir dos dados do painel")
+        st.markdown(f'''<div class="chat-cab"><div class="chat-ico">💬</div><div><div class="chat-tit">Assistente do painel</div>
+<div class="chat-sub">{modo}</div></div></div>''', unsafe_allow_html=True)
+        espera = '<div class="msg bot digitando"><i></i><i></i><i></i></div>' if pendente else ""
+        caixa = st.empty()
+        caixa.markdown(f'<div class="chat-msgs">{espera}{"".join(_bolha(m) for m in reversed(msgs))}</div>', unsafe_allow_html=True)
+        st.pills("Sugestões", SUGESTOES_IA if CHAT_CHAVE else chat.SUGESTOES, key="chat_sug", on_change=_chat_sugestao,
+                 label_visibility="collapsed")
+        st.chat_input("Pergunte sobre a audiência…", key="chat_txt", on_submit=_chat_digitou, max_chars=500,
+                      disabled=bool(pendente))
+        if pendente:
+            msgs.append(_chat_responde(pendente))
+            del msgs[1:-40]               # guarda só as últimas mensagens da sessão
+            st.session_state["chat_pendente"] = None
+            st.rerun(scope="fragment")
 
 
 assistente()
