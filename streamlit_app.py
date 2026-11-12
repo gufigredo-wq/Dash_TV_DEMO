@@ -3055,7 +3055,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "11/11/2026 · Labs · concorrência e assistente PIPECO"
+VERSAO_PAINEL = "12/11/2026 · Labs · concorrência no PIPECO"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
@@ -3262,7 +3262,7 @@ def _chat_fonte():
         diarias = carregar_diarias(_assinatura_diarias())[0]
     except Exception:
         diarias = {}
-    return chat.Fonte(BASE, R, diarias, demo=MODO_DEMO)
+    return chat.Fonte(BASE, R, diarias, demo=MODO_DEMO, conc=CONC)
 
 
 def _chat_responde(txt):
@@ -3282,10 +3282,10 @@ def _chat_responde(txt):
             return {"q": "bot", "t": resp, "consultas": consultas, "modo": "ia", "modelo": usado, "graficos": graf}
         except Exception as ex:           # API fora, chave errada, limite do plano…: cai nas respostas prontas
             aviso = f"*(A IA não respondeu agora: {ex.__class__.__name__}. Resposta automática:)*\n"
-            return {"q": "bot", "t": aviso + chat.responder(txt, BASE, R), "modo": "erro"}
+            return {"q": "bot", "t": aviso + chat.responder(txt, BASE, R, conc=CONC), "modo": "erro"}
     extra = (f"*(Limite de {CHAT_LIMITE} perguntas à IA nesta sessão. Resposta automática:)*\n" if CHAT_CHAVE else "")
     try:
-        return {"q": "bot", "t": extra + chat.responder(txt, BASE, R), "modo": "pronta"}
+        return {"q": "bot", "t": extra + chat.responder(txt, BASE, R, conc=CONC), "modo": "pronta"}
     except Exception:
         return {"q": "bot", "t": "Tive um problema para calcular essa resposta. Tente perguntar de outro jeito.", "modo": "erro"}
 
@@ -3305,7 +3305,7 @@ def _bolha(m):
     return f'<div class="msg {m["q"]}">{corpo}</div>'
 
 
-SUGESTOES_IA = ["Destaques do último mês", "Quais programas correm risco de não bater a meta?",
+SUGESTOES_IA = ["Destaques do último mês", "Em que horário a TV Bahia tem a menor vantagem?", "Quais programas correm risco de não bater a meta?",
                 "Como o BATV evoluiu em 2026?", "Compare o Jornal da Manhã com 2025", "Projeção da faixa 6h às 24h"]
 
 
