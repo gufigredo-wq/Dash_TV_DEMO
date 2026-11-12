@@ -15,7 +15,7 @@ import pandas as pd
 FAIXA, FAIXA_7 = "6h às 24h", "7h às 24h"
 MESES = "jan fev mar abr mai jun jul ago set out nov dez".split()
 
-SUGESTOES = ["Como foi o último mês?", "Quais programas mais cresceram?", "Chance de bater a meta",
+SUGESTOES = ["Como foi o último mês?", "Concorrência no último mês", "Quais programas mais cresceram?", "Chance de bater a meta",
              "Maior audiência", "O que é rating e share?", "Como a projeção é feita?"]
 
 BOAS_VINDAS = ("Olá! Sou o **PIPECO**, o assistente do painel. Pergunte sobre a **audiência** e o **share** da TV Bahia, "
@@ -234,7 +234,27 @@ def _acha_programa(t, base):
     return None
 
 
-def responder(texto, base, rodada=None):
+def r_concorrencia(conc, rec=FAIXA, met="Share"):
+    if conc is None or len(conc) == 0:
+        return "O painel ainda não tem dados de concorrência. Eles são enviados em ⚙ Atualizar dados → Concorrência."
+    f = Fonte(pd.DataFrame(columns=["programa", "metrica", "mes", "valor"]), conc=conc)
+    r = f_conc_ranking(f, rec, met)
+    if r.get("erro"):
+        return r["erro"]
+    suf = "%" if met == "Share" else ""
+    txt = f"**Concorrência** · {r['recorte']} · {met.lower()} em {_mes_rot(r['mes'])}:\n" + "\n".join(
+        f"• {l['posicao']}º **{l['emissora']}**: {br(l['valor'])}{suf}"
+        + (f" ({sinal(l['var_ano_anterior'])} vs ano anterior)" if l.get("var_ano_anterior") is not None else "")
+        for l in r["linhas"] if l.get("posicao"))
+    if r.get("vantagem_tv_bahia_sobre_melhor_concorrente") is not None:
+        v = r["vantagem_tv_bahia_sobre_melhor_concorrente"]
+        txt += (f"\n\nA TV Bahia está **{br(abs(v))} {r['unidade']} {'à frente' if v >= 0 else 'atrás'}** da "
+                f"{r['melhor_concorrente']}" + (f" (um ano antes: {sinal(r['vantagem_um_ano_antes'])})."
+                                                if r.get("vantagem_um_ano_antes") is not None else "."))
+    return txt
+
+
+def responder(texto, base, rodada=None, conc=None):
     """Pergunta em texto livre -> resposta em markdown simples (negrito, itálico, itens '• ')."""
     t = norm(texto)
     if not t:
@@ -246,6 +266,12 @@ def responder(texto, base, rodada=None):
         return CONCEITOS
     if re.search(r"\b(como|metodo|metodologia)\b.*\b(projec|calcul|model|feita|funciona)", t) or "metodologia" in t:
         return PROJECAO
+    eh_conc = re.search(r"\b(concorr\w*|emissoras?|vantagem|vice|segunda colocada|lideranca|outras emissoras)\b", t)
+    if not eh_conc and conc is not None and len(conc):
+        eh_conc = any(norm(e) in t for e in set(conc["emissora"]) if norm(e) not in ("tv bahia globo",))
+    if eh_conc:
+        rec = _acha_programa(t, base) if len(base) else None
+        return r_concorrencia(conc, rec or FAIXA, "Audiência" if met == "Audiência" else "Share")
     prog = _acha_programa(t, base)
     if prog and not re.search(r"\b(cresc|subi|cai|queda|perd|ranking|maior|lider)", t):
         return r_programa(base, rodada, prog, met)
@@ -285,12 +311,15 @@ HISTORICO = 8                      # mensagens anteriores enviadas como contexto
 class Fonte:
     """Os dados que as ferramentas consultam: base mensal, rodada mensal dos programas e rodadas diárias das faixas."""
 
-    def __init__(self, base, rodada=None, diarias=None, demo=False):
+    def __init__(self, base, rodada=None, diarias=None, demo=False, conc=None):
         self.base = base.copy()
         self.base["mes"] = pd.to_datetime(self.base["mes"])
         self.rodada = rodada
         self.diarias = diarias or {}           # {faixa: [rodada mais recente primeiro, ...]} (diario.carregar_rodadas)
         self.demo = demo
+        c = conc.copy() if conc is not None else pd.DataFrame(columns=["mes", "recorte", "emissora", "rat", "shr"])
+        c["mes"] = pd.to_datetime(c["mes"])
+        self.conc = c                          # concorrência: mês × recorte × emissora (rat, shr)
 
     def series(self):
         return list(self.base["programa"].drop_duplicates())
@@ -447,8 +476,143 @@ def f_comparar_periodos(fonte, series=None, metrica="ambas", a_inicio=None, a_fi
             "observacao": "médias simples dos meses", "linhas": linhas}
 
 
+TVB, OUTRAS = "TV Bahia (Globo)", "Outras emissoras"      # mesmos nomes do concorrencia.py
+
+
+def _rec(fonte, recorte):
+    """Recorte pedido -> nome da base de concorrência (faixa ou programa = horário do programa)."""
+    recs = list(dict.fromkeys(fonte.conc["recorte"]))
+    if recorte in recs:
+        return recorte
+    alvo = (_resolve(recorte, fonte) or [None])[0] if recorte else None
+    return alvo if alvo in recs else (FAIXA if FAIXA in recs else (recs[0] if recs else None))
+
+
+def _emis(fonte, nomes):
+    todas = list(dict.fromkeys(fonte.conc["emissora"]))
+    if not nomes:
+        return todas
+    out = []
+    for n in ([nomes] if isinstance(nomes, str) else nomes):
+        t = norm(n)
+        alvo = TVB if t in ("globo", "tv bahia", "rede globo", "tv bahia globo") else \
+            next((e for e in todas if norm(e) == t), None) or next((e for e in todas if t and t in norm(e)), None)
+        if alvo and alvo not in out:
+            out.append(alvo)
+    return out
+
+
+def _col(metrica):
+    return ("shr", "p.p.") if metrica != "Audiência" else ("rat", "pt")
+
+
+def _vantagem(g, col):
+    """Linhas de um mês × recorte (índice = emissora) -> (vantagem da TV Bahia, melhor concorrente) ou (None, None)."""
+    rivais = g.drop([TVB, OUTRAS], errors="ignore")[col].dropna()
+    if TVB not in g.index or rivais.empty:
+        return None, None
+    return float(g.loc[TVB, col] - rivais.max()), rivais.idxmax()
+
+
+def f_conc_ranking(fonte, recorte=None, metrica="Share", mes=None):
+    C = fonte.conc
+    if C.empty:
+        return {"erro": "o painel não tem dados de concorrência carregados"}
+    rec = _rec(fonte, recorte)
+    D = C[C["recorte"] == rec]
+    alvo = _periodo(mes, D["mes"].max())
+    alvo = alvo if alvo in set(D["mes"]) else D["mes"].max()
+    col, un = _col(metrica)
+    U = D[D["mes"] == alvo].set_index("emissora")
+    A = D[D["mes"] == alvo - pd.DateOffset(years=1)].set_index("emissora")
+    M = D[D["mes"] == alvo - pd.DateOffset(months=1)].set_index("emissora")
+    ordem = [e for e in U.sort_values(col, ascending=False).index if e != OUTRAS]
+    linhas = [{"posicao": k + 1, "emissora": e, "valor": _r(U.loc[e, col]),
+               "var_mes_anterior": _r(U.loc[e, col] - M.loc[e, col]) if e in M.index else None,
+               "var_ano_anterior": _r(U.loc[e, col] - A.loc[e, col]) if e in A.index else None} for k, e in enumerate(ordem)]
+    if OUTRAS in U.index:
+        linhas.append({"posicao": None, "emissora": OUTRAS, "valor": _r(U.loc[OUTRAS, col]), "agregado": True})
+    van, quem = _vantagem(U, col)
+    van_a, _ = _vantagem(A, col) if len(A) else (None, None)
+    return {"recorte": rec if rec in (FAIXA, FAIXA_7) else f"horário do {rec}", "metrica": metrica, "unidade": un,
+            "mes": _mes_txt(alvo), "lider": ordem[0] if ordem else None,
+            "vantagem_tv_bahia_sobre_melhor_concorrente": _r(van), "melhor_concorrente": quem,
+            "vantagem_um_ano_antes": _r(van_a), "linhas": linhas}
+
+
+def f_conc_serie(fonte, recorte=None, emissoras=None, metrica="Share", inicio=None, fim=None):
+    C = fonte.conc
+    if C.empty:
+        return {"erro": "o painel não tem dados de concorrência carregados"}
+    rec = _rec(fonte, recorte)
+    D = C[C["recorte"] == rec]
+    col, un = _col(metrica)
+    fim_ = _periodo(fim, D["mes"].max())
+    ini_ = _periodo(inicio, fim_ - pd.DateOffset(months=11))
+    ems = _emis(fonte, emissoras)
+    D = D[D["emissora"].isin(ems) & D["mes"].between(ini_, fim_)].sort_values(["emissora", "mes"])
+    return {"recorte": rec if rec in (FAIXA, FAIXA_7) else f"horário do {rec}", "metrica": metrica, "unidade": un,
+            "periodo": f"{_mes_txt(ini_)} a {_mes_txt(fim_)}",
+            "linhas": [{"emissora": r.emissora, "mes": _mes_txt(r.mes), "valor": _r(getattr(r, col))} for r in D.itertuples()]}
+
+
+def f_conc_vantagem(fonte, recorte=None, metrica="Share", mes=None, inicio=None, fim=None):
+    """Com recorte: a vantagem mês a mês. Sem recorte (ou 'todos'): todos os recortes num mês."""
+    C = fonte.conc
+    if C.empty:
+        return {"erro": "o painel não tem dados de concorrência carregados"}
+    col, un = _col(metrica)
+    linhas = []
+    if recorte and norm(recorte) not in ("todos", "todos os horarios", "todos os recortes"):
+        rec = _rec(fonte, recorte)
+        D = C[C["recorte"] == rec]
+        fim_ = _periodo(fim, D["mes"].max())
+        ini_ = _periodo(inicio, fim_ - pd.DateOffset(months=11))
+        for m, g in D[D["mes"].between(ini_, fim_)].groupby("mes"):
+            van, quem = _vantagem(g.set_index("emissora"), col)
+            if van is not None:
+                linhas.append({"mes": _mes_txt(m), "vantagem": _r(van), "melhor_concorrente": quem})
+        return {"modo": "por mês", "recorte": rec if rec in (FAIXA, FAIXA_7) else f"horário do {rec}", "metrica": metrica,
+                "unidade": un, "periodo": f"{_mes_txt(ini_)} a {_mes_txt(fim_)}", "linhas": linhas}
+    alvo = _periodo(mes, C["mes"].max())
+    alvo = alvo if alvo in set(C["mes"]) else C["mes"].max()
+    U = C[C["mes"] == alvo]
+    A = C[C["mes"] == alvo - pd.DateOffset(years=1)]
+    for rec, g in U.groupby("recorte"):
+        van, quem = _vantagem(g.set_index("emissora"), col)
+        if van is None:
+            continue
+        ga = A[A["recorte"] == rec].set_index("emissora")
+        van_a, _ = _vantagem(ga, col) if len(ga) else (None, None)
+        linhas.append({"recorte": rec if rec in (FAIXA, FAIXA_7) else f"horário do {rec}", "vantagem": _r(van),
+                       "melhor_concorrente": quem, "vantagem_um_ano_antes": _r(van_a),
+                       "valor_tv_bahia": _r(g.set_index("emissora").loc[TVB, col])})
+    linhas.sort(key=lambda l: l["vantagem"])
+    return {"modo": "todos os recortes", "mes": _mes_txt(alvo), "metrica": metrica, "unidade": un, "linhas": linhas}
+
+
 _SERIES_TXT = "Nome da faixa ou do programa, como aparece no catálogo (ex.: 'BATV', '6h às 24h')."
+_REC_TXT = ("Faixa ('6h às 24h', '7h às 24h') ou nome de um programa local, que significa o HORÁRIO do programa "
+            "(ex.: 'BATV' = o que cada emissora marcou no horário do BATV). Padrão: 6h às 24h.")
 FERRAMENTAS = {
+    "concorrencia_ranking": (f_conc_ranking, "CONCORRÊNCIA: ranking das emissoras (TV Bahia e concorrentes) num mês e recorte, "
+                             "com variações vs mês anterior e vs ano anterior, a líder e a vantagem da TV Bahia sobre a melhor "
+                             "concorrente.", {
+        "recorte": {"type": "string", "description": _REC_TXT},
+        "metrica": {"type": "string", "enum": ["Share", "Audiência"]},
+        "mes": {"type": "string", "description": "AAAA-MM (padrão: o mais recente)."}}, []),
+    "concorrencia_serie": (f_conc_serie, "CONCORRÊNCIA: valores mensais de audiência ou share das emissoras num recorte e período.", {
+        "recorte": {"type": "string", "description": _REC_TXT},
+        "emissoras": {"type": "array", "items": {"type": "string"}, "description": "Vazio = todas."},
+        "metrica": {"type": "string", "enum": ["Share", "Audiência"]},
+        "inicio": {"type": "string", "description": "AAAA-MM"}, "fim": {"type": "string", "description": "AAAA-MM"}}, []),
+    "concorrencia_vantagem": (f_conc_vantagem, "CONCORRÊNCIA: vantagem da TV Bahia sobre a melhor concorrente (positiva = TV Bahia "
+                              "na frente). Com recorte: mês a mês no período. Com recorte='todos': todos os horários num mês, "
+                              "do mais apertado ao mais folgado, com a vantagem de um ano antes.", {
+        "recorte": {"type": "string", "description": _REC_TXT + " Use 'todos' para comparar os horários."},
+        "metrica": {"type": "string", "enum": ["Share", "Audiência"]},
+        "mes": {"type": "string", "description": "AAAA-MM (modo todos os horários)"},
+        "inicio": {"type": "string", "description": "AAAA-MM"}, "fim": {"type": "string", "description": "AAAA-MM"}}, []),
     "serie_mensal": (f_serie_mensal, "Valores mensais (realizados) de audiência e/ou share de faixas e programas num período. "
                      "Use agregar='ano' para médias por ano.", {
         "series": {"type": "array", "items": {"type": "string"}, "description": _SERIES_TXT},
@@ -506,6 +670,11 @@ def instrucoes(fonte):
     corte = R.get("meta", {}).get("corte")
     diar = {fx: f"{l[0]['corte']:%d/%m/%Y}" for fx, l in fonte.diarias.items() if l and l[0].get("corte") is not None}
     from_dias = ", ".join(f"{p}" for p in fonte.series())
+    C = fonte.conc
+    conc_txt = (f"- CONCORRÊNCIA (ferramentas concorrencia_*): {', '.join(dict.fromkeys(C['emissora']))}; "
+                f"{_mes_txt(C['mes'].min())} a {_mes_txt(C['mes'].max())}; recortes: {', '.join(dict.fromkeys(C['recorte']))} "
+                f"(um programa = o horário dele). '{OUTRAS}' é um agregado (TV paga e demais), fora do ranking.\n"
+                if len(C) else "- CONCORRÊNCIA: sem dados carregados no painel.\n")
     return f"""Você é o PIPECO, o assistente do Painel de Audiência de TV da Rede Bahia (TV Bahia, afiliada Globo).
 Se perguntarem quem você é, apresente-se como PIPECO.
 Responda em português do Brasil, de forma curta e direta, para analistas de pesquisa, jornalismo e comercial.
@@ -515,6 +684,7 @@ DADOS (consulte SEMPRE pelas ferramentas; nunca invente números):
 - Séries disponíveis: {from_dias}.
 - "6h às 24h" e "7h às 24h" são as FAIXAS (a emissora no dia todo); os demais são programas locais.
 - Meses com dado: {_mes_txt(ini) if ini is not None else '–'} a {_mes_txt(fim) if fim is not None else '–'}.
+{conc_txt.rstrip()}
 - Projeção dos programas (modelo mensal): dados até {f"{corte:%d/%m/%Y}" if corte is not None else 'sem rodada'}.
 - Projeção das faixas (modelo diário): {diar or 'sem rodada'}.
 {"- ATENÇÃO: estes são DADOS FICTÍCIOS de demonstração." if fonte.demo else ""}
@@ -618,7 +788,9 @@ def perguntar_ia(pergunta, fonte, chave, modelo=None, historico=(), cliente=None
 def descreve_consulta(c):
     """Texto curto de uma consulta, para o item 'Como cheguei nisso'."""
     nomes = {"serie_mensal": "Série mensal", "ranking": "Ranking", "projecao_programas": "Projeção dos programas",
-             "projecao_faixa": "Projeção da faixa", "comparar_periodos": "Comparação de períodos"}
+             "projecao_faixa": "Projeção da faixa", "comparar_periodos": "Comparação de períodos",
+             "concorrencia_ranking": "Concorrência · ranking", "concorrencia_serie": "Concorrência · série",
+             "concorrencia_vantagem": "Concorrência · vantagem"}
     a = c.get("args") or {}
     det = " · ".join(f"{k}: {', '.join(map(str, v)) if isinstance(v, list) else v}" for k, v in a.items() if v not in (None, "", []))
     return f"{nomes.get(c.get('ferramenta'), c.get('ferramenta'))}" + (f" ({det})" if det else "")
@@ -869,6 +1041,30 @@ def graficos(consultas, cores=None, maximo=2):
                     out.append(svg_grupos([nome(l["serie"]) for l in ls],
                                           [(_per_rot(r.get("periodo_a", "A")), PALETA[0], [l["media_a"] for l in ls]),
                                            (_per_rot(r.get("periodo_b", "B")), PALETA[7], [l["media_b"] for l in ls])], f"{met} · comparação", f2))
+            elif f == "concorrencia_ranking":
+                un = r.get("unidade", "")
+                suf = "%" if r.get("metrica") != "Audiência" else ""
+                rivais = [l["emissora"] for l in L if l["emissora"] not in (TVB, OUTRAS)]
+                itens = [(l["emissora"], l["valor"], "#2a78d6" if l["emissora"] == TVB else "#8a8984" if l["emissora"] == OUTRAS
+                          else PALETA[1 + rivais.index(l["emissora"]) % 6], f"{br(l['valor'])}{suf}") for l in L]
+                out.append(svg_barras(itens, f"{r.get('metrica')} · {r.get('recorte')} · {_mes_rot(r.get('mes'))}",
+                                      lambda v: f"{br(v)}{suf}"))
+            elif f == "concorrencia_serie":
+                ult = {l["emissora"]: l["valor"] for l in L}                     # ordem = posição no último mês (cores do ranking)
+                ems = sorted(dict.fromkeys(l["emissora"] for l in L),
+                             key=lambda e: (e != TVB, e == OUTRAS, -(ult.get(e) or 0)))
+                rivais = [e for e in ems if e not in (TVB, OUTRAS)]
+                series = [(e, "#2a78d6" if e == TVB else "#8a8984" if e == OUTRAS else PALETA[1 + rivais.index(e) % 6],
+                           [(_mes_rot(l["mes"]), l["valor"]) for l in L if l["emissora"] == e]) for e in ems]
+                out.append(svg_linhas(series[:5], f"{r.get('metrica')} · {r.get('recorte')}", f2))
+            elif f == "concorrencia_vantagem":
+                un = r.get("unidade", "")
+                rot = (lambda l: _mes_rot(l["mes"])) if r.get("modo") == "por mês" else (lambda l: l["recorte"].replace("horário do ", ""))
+                itens = [(rot(l), l["vantagem"], "#1baf7a" if l["vantagem"] >= 0 else "#e34948", sinal(l["vantagem"])) for l in L]
+                rivais_v = list(dict.fromkeys(l["melhor_concorrente"] for l in L))
+                tit = (f"Vantagem · {r.get('recorte')}" if r.get("modo") == "por mês" else f"Vantagem por horário · {_mes_rot(r.get('mes'))}")
+                tit += f" · {un} vs " + (rivais_v[0] if len(rivais_v) == 1 else "melhor concorrente")
+                out.append(svg_barras(itens, tit, lambda v: sinal(v)))
         except Exception:                 # um gráfico que não deu certo não pode atrapalhar a resposta
             continue
     vistos, final = set(), []
