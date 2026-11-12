@@ -7,7 +7,3 @@ openpyxl==3.1.5
 matplotlib==3.10.8
 # assistente com IA (Gemini); sem a chave GEMINI_API_KEY o assistente usa respostas prontas
 google-genai==3.1.0
-# banco de dados (opcional: só é usado quando há [banco] url nos Secrets ou PAINEL_DB_URL)
-sqlalchemy==2.0.36
-psycopg[binary]==3.2.3
-# SQL Server: troque a linha acima por  pyodbc==5.2.0  (e instale o "ODBC Driver 18 for SQL Server" no servidor)
