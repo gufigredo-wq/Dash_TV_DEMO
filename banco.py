@@ -12,6 +12,7 @@ instalado (ex.: SQL Server: mssql+pyodbc://... com o ODBC Driver 18). As tabelas
 import io
 import json
 import os
+import re
 from datetime import datetime
 from functools import lru_cache
 
@@ -50,6 +51,13 @@ TABELAS = {
         "colunas": {"mes": "data", "recorte": "texto(60)", "emissora": "texto(60)", "rat": "número", "shr": "número",
                     "origem": "texto(200)", "atualizado_em": "data e hora"},
         "chave": ["mes", "recorte", "emissora"]},
+    # futebol na TV (Série A e Seleção): uma linha por jogo × métrica × emissora, no formato do BI de partidas
+    "tv_futebol": {
+        "colunas": {"data": "data", "hora_inicio": "texto(5)", "hora_fim": "texto(5)", "dia_semana": "texto(12)",
+                    "nome": "texto(40)", "partida": "texto(120)", "quadro": "texto(80)", "competicao": "texto(40)",
+                    "transmissora": "texto(30)", "metrica": "texto(12)", "emissora": "texto(40)", "valor": "número",
+                    "origem": "texto(200)", "atualizado_em": "data e hora"},
+        "chave": ["data", "hora_inicio", "partida", "metrica", "emissora"]},
     # parâmetros editados nos painéis (números oficiais, previsão do BI, metas mensais, bancos excluídos, rodada ativa)
     "painel_parametros": {
         "colunas": {"painel": "texto(10)", "chave": "texto(60)", "valor": "texto longo (JSON)", "atualizado_em": "data e hora"},
@@ -84,7 +92,8 @@ def _metadados():
              "texto longo (JSON)": Text}
     md = MetaData()
     for nome, t in TABELAS.items():
-        Table(nome, md, *[Column(c, tipos[tp], primary_key=c in t["chave"], nullable=c not in t["chave"])
+        Table(nome, md, *[Column(c, tipos.get(tp) or String(int(re.match(r"texto\((\d+)\)", tp)[1])),
+                                 primary_key=c in t["chave"], nullable=c not in t["chave"])
                           for c, tp in t["colunas"].items()])
     return md
 
