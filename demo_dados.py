@@ -239,6 +239,8 @@ def gera(destino="."):
     import concorrencia                       # concorrentes fictícios coerentes com a base da TV Bahia
     base = tv.ler_base(os.path.join(destino, "dados", "tv_mensal.csv"))
     concorrencia.gera_demo(base).to_csv(os.path.join(destino, "dados", "tv_concorrencia.csv"), index=False)
+    import futebol                            # jogos fictícios (Série A e Seleção)
+    futebol.gera_demo().to_csv(os.path.join(destino, "dados", "tv_futebol.csv"), index=False)
 
 
 def _gera_diario(destino):
