@@ -2,6 +2,7 @@ import glob
 from html import escape as html_escape
 import json
 import os
+import re
 import shutil
 from datetime import datetime
 
@@ -907,11 +908,11 @@ _EFEITOS_JS = r"""
   }
   function varre(raiz) {
     escalona(raiz);
-    raiz.querySelectorAll(".kpi .v, .anel .gv, .gtxt .gf > b").forEach(conta);
+    raiz.querySelectorAll(".kpi .v, .anel .gv, .gtxt .gf > b, .fu-hero .pv, .fu-partida .fv").forEach(conta);
   }
   new MutationObserver(ms => {
     for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) varre(n.closest ? (n.closest(".js-plotly-plot") || n) : n);
-    ms.forEach(m => { if (m.type === "characterData" && m.target.parentElement?.matches(".kpi .v, .anel .gv, .gtxt .gf > b")) conta(m.target.parentElement); });
+    ms.forEach(m => { if (m.type === "characterData" && m.target.parentElement?.matches(".kpi .v, .anel .gv, .gtxt .gf > b, .fu-hero .pv, .fu-partida .fv")) conta(m.target.parentElement); });
   }).observe(D.body, {childList: true, subtree: true, characterData: true});
   varre(D);
   // gráficos de uma aba que estava escondida nascem com a largura padrão do Plotly (700 px) e cortam a direita:
@@ -2422,10 +2423,36 @@ def _assinatura_conc():
     return (os.path.getmtime(ARQ_CONC), os.path.getsize(ARQ_CONC)) if os.path.exists(ARQ_CONC) else ()
 
 
+def _prepara_tabelas_novas():
+    """Tabelas que entraram depois da 1ª versão (concorrência e futebol): se faltarem no banco, o painel tenta criá-las uma
+    vez (só elas; as outras não são tocadas). Sem permissão de criar tabelas, fica o aviso para a TI, com o erro do banco."""
+    if not _banco_ativo() or st.session_state.get("_tabelas_novas_ok"):
+        return None
+    try:
+        criadas = banco.criar_se_faltar(["tv_concorrencia", "tv_futebol"])
+        st.session_state["_tabelas_novas_ok"] = True
+        if criadas:
+            registra("banco.criar_tabelas", recurso_tipo="banco", detalhe=", ".join(criadas))
+            st.cache_data.clear()
+        return None
+    except Exception as ex:
+        return f"{ex.__class__.__name__}: {str(ex).splitlines()[0][:220]}"
+
+
+_ERRO_CRIAR = _prepara_tabelas_novas()
+
+
+def _msg_tabela(nome, erro):
+    det = f" Erro do banco: `{erro}`." if erro else ""
+    cria = f" Tentativa de criar a tabela: `{_ERRO_CRIAR}`." if _ERRO_CRIAR else ""
+    return (f"A tabela **{nome}** ainda não existe no banco ou não pôde ser lida.{det}{cria} A TI pode criá-la com "
+            "`python carga_banco.py --url \"...\" --criar --apenas-criar` ou liberar ao painel a permissão de criar tabelas.")
+
+
 try:
     CONC, _ERRO_CONC = carregar_conc(_assinatura_conc()), None
 except Exception as _ex:                      # tabela ainda não criada no banco: a aba avisa, o resto do painel segue
-    CONC, _ERRO_CONC = pd.DataFrame(columns=concorrencia.COLUNAS), _ex.__class__.__name__
+    CONC, _ERRO_CONC = pd.DataFrame(columns=concorrencia.COLUNAS), f"{_ex.__class__.__name__}: {str(_ex).splitlines()[0][:220]}"
 
 
 def cor_emissora(e, ordem):
@@ -2453,8 +2480,7 @@ def _medalha(pos):
 def pagina_concorrencia():
     if CONC.empty:
         secao(1, "Concorrência", "audiência e share de cada emissora, por faixa e por horário dos programas")
-        msg = (f"A tabela de concorrência ainda não existe no banco ({_ERRO_CONC}); peça à TI para criá-la "
-               "(`python carga_banco.py --url ... --criar`)." if _ERRO_CONC else "Ainda não há dados de concorrência.")
+        msg = _msg_tabela("tv_concorrencia", _ERRO_CONC) if _ERRO_CONC else "Ainda não há dados de concorrência."
         st.info(msg + " Baixe a planilha modelo, preencha com o ranking de emissoras do Instar e envie em "
                       "**⚙ Atualizar dados → 7 · Concorrência**, no rodapé.")
         st.download_button("⬇️ Baixar planilha modelo", concorrencia.modelo_xlsx(), "modelo_concorrencia_tv.xlsx",
@@ -2665,7 +2691,8 @@ with paginas[2]:
 ARQ_FUT = os.path.join("dados", "tv_futebol.csv")
 COR_FUT = {futebol.TVB: AZUL, "Record": "#eb6834", "SBT": "#1baf7a", "Band": "#eda100", "TVE Bahia": "#00a3a3",
            "OCP": "#9aa3b5", "Sem referência": "#c7ccd6", "TLE (total ligados)": "#52514e"}
-CURTO_COMP = {futebol.SERIE_A: "Série A", futebol.SELECAO: "Seleção", futebol.SELECAO_F: "Seleção fem."}
+CURTO_COMP = {futebol.SERIE_A: "Série A", futebol.SELECAO: "Seleção", futebol.SELECAO_F: "Seleção fem.",
+              futebol.COPA: "Copa (outras)", futebol.OUTROS: "Outros campeonatos", futebol.PRE_POS: "Pré/pós-jogo e VT"}
 
 
 @st.cache_data(show_spinner=False)
@@ -2691,7 +2718,7 @@ def _assinatura_fut():
 try:
     FUT, _ERRO_FUT = carregar_fut(_assinatura_fut()), None
 except Exception as _ex:                      # tabela ainda não criada no banco: a aba avisa, o resto do painel segue
-    FUT, _ERRO_FUT = pd.DataFrame(columns=futebol.COLUNAS), _ex.__class__.__name__
+    FUT, _ERRO_FUT = pd.DataFrame(columns=futebol.COLUNAS), f"{_ex.__class__.__name__}: {str(_ex).splitlines()[0][:220]}"
 
 
 def _dmy(d):
@@ -2702,40 +2729,246 @@ def _partida_html(p):
     return html_esc(str(p)).replace(" X ", " <span style='opacity:.55'>×</span> ")
 
 
+def _nome_quadro(q):
+    """'FUT ELIMINAT COPA MUNDO VIVO' -> 'Eliminat Copa Mundo' (o Instar repete FUT e VIVO em todos os quadros)."""
+    t = re.sub(r"^FUT\s+|\s+VIVO$", "", str(q or "").strip(), flags=re.I)
+    return t.title().replace(" Do ", " do ").replace(" Da ", " da ").replace(" De ", " de ")
+
+
+def _media_por(J, chave, emissoras):
+    """Médias no estilo do BI: emissora transmissora = média do valor nos jogos que ela transmitiu; OCP, sem referência e
+    TLE = média da coluna em todos os jogos do filtro. Devolve {emissora: Series(índice = chave)}."""
+    out = {}
+    for e in emissoras:
+        if e in futebol.AGREGADOS:
+            if e in J.columns:
+                out[e] = J.groupby(chave)[e].mean()
+        else:
+            x = J[J["transmissora"] == e]
+            if len(x):
+                out[e] = x.groupby(chave)["valor"].mean()
+    return out
+
+
+_PALETA_TIMES = ["#1f4e9c", "#c0392b", "#0f7a4d", "#7b3fa0", "#b8860b", "#00838f", "#ad1457", "#455a64", "#e65100", "#2e7d32"]
+
+
+def _time_fmt(t):
+    """'VITORIA BA' -> 'Vitoria BA' · 'BRASIL' -> 'Brasil' (sigla de estado continua maiúscula)."""
+    p = str(t).strip().split()
+    return " ".join(w.upper() if (len(w) == 2 and k == len(p) - 1 and len(p) > 1) else w.capitalize() for k, w in enumerate(p))
+
+
+def _times(partida):
+    p = [x.strip() for x in re.split(r"\s+X\s+", str(partida).upper(), maxsplit=1)]
+    return (p[0], p[1]) if len(p) == 2 else (str(partida), "")
+
+
+def _selo(time, tam=34):
+    """Selo redondo com as iniciais do time (no lugar do escudo, que é marca do clube)."""
+    w = [x for x in str(time).split() if x not in ("FC", "EC", "SC")]
+    if not w:
+        return ""
+    ini = w[0][:3] if (len(w) == 1 or (len(w) == 2 and len(w[1]) == 2)) else (w[0][0] + w[1][0])
+    cor = _PALETA_TIMES[sum(map(ord, w[0])) % len(_PALETA_TIMES)]
+    return (f'<span class="fu-selo" style="--sc:{cor}; width:{tam}px; height:{tam}px; font-size:{tam * .34:.0f}px" '
+            f'title="{html_esc(_time_fmt(time))}">{html_esc(ini)}</span>')
+
+
+def _chip_em(e):
+    return f'<span class="fu-chip" style="--ec:{COR_FUT.get(e, CINZA)}">{html_esc(e.replace(" (Globo)", ""))}</span>'
+
+
+def _minutos(h0, h1):
+    try:
+        a, b = int(h0[:2]) * 60 + int(h0[3:5]), int(h1[:2]) * 60 + int(h1[3:5])
+        return (b - a) % 1440 or 120
+    except Exception:
+        return 120
+
+
+def _css_futebol():
+    st.markdown(f"""<style>
+.fu-hero {{position:relative; overflow:hidden; border-radius:18px; padding:20px 24px 18px; margin:6px 0 14px; color:#fff;
+    background:repeating-linear-gradient(90deg, #0f5a35 0 64px, #12663c 64px 128px);
+    box-shadow:0 10px 30px rgba(0,0,0,{SOMBRA2});}}
+.fu-hero::before {{content:""; position:absolute; inset:10px; border:2px solid rgba(255,255,255,.18); border-radius:10px; pointer-events:none;
+    background:radial-gradient(circle at 50% 50%, transparent 0 58px, rgba(255,255,255,.18) 58px 60px, transparent 60px),
+               linear-gradient(90deg, transparent calc(50% - 1px), rgba(255,255,255,.18) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px));}}
+.fu-hero::after {{content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(105deg, transparent 30%, rgba(255,255,255,.10) 50%, transparent 70%); background-size:220% 100%;
+    animation:brilho 9s ease-in-out infinite;}}
+.fu-hero .tt {{position:relative; font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; opacity:.85; font-weight:700;}}
+.fu-hero .tg {{position:relative; font-size:1.25rem; font-weight:800; margin:2px 0 12px;}}
+.fu-hero .placar {{position:relative; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px;}}
+.fu-hero .pc {{background:rgba(0,0,0,.30); border:1px solid rgba(255,255,255,.16); border-radius:12px; padding:10px 14px;
+    backdrop-filter:blur(2px); animation:subir .5s cubic-bezier(.2,.7,.2,1) backwards;}}
+.fu-hero .pc:nth-child(2) {{animation-delay:.06s;}} .fu-hero .pc:nth-child(3) {{animation-delay:.12s;}} .fu-hero .pc:nth-child(4) {{animation-delay:.18s;}}
+.fu-hero .pl {{font-size:.66rem; text-transform:uppercase; letter-spacing:.08em; opacity:.8; font-weight:700;}}
+.fu-hero .pv {{font-family:"Roboto Mono", Consolas, monospace; font-size:1.7rem; font-weight:800; line-height:1.15; color:#fff;
+    text-shadow:0 0 14px rgba(255,255,255,.25);}}
+.fu-hero .ps {{font-size:.72rem; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}}
+@media (max-width:900px) {{ .fu-hero .placar {{grid-template-columns:repeat(2, minmax(0, 1fr));}} }}
+.fu-selo {{display:inline-grid; place-items:center; border-radius:50%; flex:none; color:#fff; font-weight:800; letter-spacing:.02em;
+    background:radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--sc) 70%, #fff), var(--sc) 70%);
+    box-shadow:0 0 0 2px {CARTAO}, 0 0 0 3px color-mix(in srgb, var(--sc) 60%, transparent);}}
+.fu-chip {{display:inline-flex; align-items:center; gap:5px; padding:1px 8px 1px 6px; border-radius:999px; font-size:.72rem; font-weight:600;
+    white-space:nowrap; color:{TINTA}; background:color-mix(in srgb, var(--ec) 14%, transparent); border:1px solid color-mix(in srgb, var(--ec) 40%, transparent);}}
+.fu-chip::before {{content:""; width:7px; height:7px; border-radius:50%; background:var(--ec);}}
+.fu-partida {{background:{CARTAO}; border:1px solid {BORDA}; border-radius:16px; padding:14px 16px 12px; position:relative; overflow:hidden;
+    box-shadow:0 6px 20px rgba(0,0,0,{SOMBRA}); animation:subir .5s cubic-bezier(.2,.7,.2,1) backwards;}}
+.fu-partida::before {{content:""; position:absolute; left:0; right:0; top:0; height:4px; background:linear-gradient(90deg, var(--ec), color-mix(in srgb, var(--ec) 30%, transparent));}}
+.fu-partida .cab {{display:flex; justify-content:space-between; align-items:center; font-size:.66rem; text-transform:uppercase;
+    letter-spacing:.1em; color:{CINZA}; font-weight:700; margin-bottom:10px;}}
+.fu-partida .jogo {{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; text-align:center;}}
+.fu-partida .lado {{display:flex; flex-direction:column; align-items:center; gap:6px; font-weight:700; font-size:.86rem; color:{TINTA};}}
+.fu-partida .x {{font-size:.8rem; color:{CINZA}; font-weight:700;}}
+.fu-partida .fv {{display:block; text-align:center; font-family:"Roboto Mono", Consolas, monospace; font-size:2.2rem; font-weight:800;
+    color:var(--ec); margin:10px 0 2px; line-height:1;}}
+.fu-partida .fl {{text-align:center; font-size:.7rem; color:{CINZA}; margin-bottom:10px;}}
+.fu-partida .info {{display:flex; flex-wrap:wrap; gap:6px; justify-content:center;}}
+.fu-partida .info span.t {{font-size:.72rem; padding:2px 8px; border-radius:999px; background:{CAMPO}; border:1px solid {BORDA}; color:{TINTA2};}}
+.fu-tab {{max-height:470px; overflow:auto; border:1px solid {BORDA}; border-radius:12px;}}
+.fu-tab table {{width:100%; border-collapse:separate; border-spacing:0; font-size:.78rem;}}
+.fu-tab th {{position:sticky; top:0; z-index:1; background:{CAMPO}; color:{CINZA}; font-size:.64rem; text-transform:uppercase;
+    letter-spacing:.06em; text-align:left; padding:7px 8px; border-bottom:1px solid {BORDA};}}
+.fu-tab td {{padding:6px 8px; border-bottom:1px solid {LINHA}; color:{TINTA}; white-space:nowrap;}}
+.fu-tab tr:hover td {{background:{REALCE};}}
+.fu-tab .n {{text-align:right; font-variant-numeric:tabular-nums;}}
+.fu-tab .pj {{display:flex; align-items:center; gap:6px;}}
+.fu-tab .bar {{height:6px; border-radius:3px; background:var(--ec); min-width:2px;}}
+.fu-tab .vl {{display:flex; align-items:center; gap:8px; justify-content:flex-end;}}
+.fu-ficha {{display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center; background:{CARTAO}; border:1px solid {BORDA};
+    border-radius:16px; padding:14px 18px; margin-bottom:12px; box-shadow:0 6px 20px rgba(0,0,0,{SOMBRA});}}
+.fu-ficha .nm {{font-size:1.15rem; font-weight:800; color:{TINTA};}}
+.fu-ficha .sub {{font-size:.74rem; color:{CINZA};}}
+.fu-ficha .num {{display:flex; flex-wrap:wrap; gap:18px; margin-top:8px;}}
+.fu-ficha .num div {{min-width:92px;}}
+.fu-ficha .num b {{display:block; font-family:"Roboto Mono", Consolas, monospace; font-size:1.25rem; color:{TINTA};}}
+.fu-ficha .num span {{font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:{CINZA};}}
+.fu-bavi {{border-left:4px solid #c0392b; background:linear-gradient(90deg, color-mix(in srgb, #c0392b 10%, {CARTAO}), {CARTAO} 60%);}}
+</style>""", unsafe_allow_html=True)
+
+
+def _cartao_partida(r, met, titulo):
+    suf = "%" if met == "Share" else ""
+    a, b = _times(r["partida"])
+    cor = COR_FUT.get(r["transmissora"], AZUL)
+    jogo = (f'<div class="jogo"><div class="lado">{_selo(a, 46)}<span>{html_esc(_time_fmt(a))}</span></div><div class="x">×</div>'
+            f'<div class="lado">{_selo(b, 46)}<span>{html_esc(_time_fmt(b))}</span></div></div>') if b else \
+           f'<div class="jogo"><div></div><div class="lado"><span>{html_esc(str(r["partida"]))}</span></div><div></div></div>'
+    return (f'<div class="fu-partida" style="--ec:{cor}"><div class="cab"><span>{titulo}</span>{_chip_em(r["transmissora"])}</div>{jogo}'
+            f'<span class="fv">{br(r["valor"])}{suf}</span><div class="fl">{tv.SIGLA[met]} · {html_esc(_nome_quadro(r["quadro"]))}</div>'
+            f'<div class="info"><span class="t">📅 {_dmy(r["data"])} · {str(r["dia_semana"]).lower()}</span>'
+            f'<span class="t">🕒 {r["hora_inicio"]}–{r["hora_fim"] or "?"}</span><span class="t">{rot_mes(r["mes"])}</span></div></div>')
+
+
+def _tabela_classificacao(J, met, emis_cols, limite=400):
+    """Todas as transmissões do filtro, da maior para a menor, em estilo de tabela de classificação (com rolagem)."""
+    suf = "%" if met == "Share" else ""
+    T = J.sort_values("valor", ascending=False).head(limite)
+    mx = T["valor"].max() or 1
+    mostrar = [e for e in emis_cols if e != "Sem referência"]
+    cab = ("<tr><th></th><th>Data</th><th>Hora</th><th>Partida</th><th>Competição</th><th>Transmissora</th><th class='n'>Valor</th>"
+           + "".join(f"<th class='n'>{html_esc(e.replace(' (Globo)', '').replace(' (total ligados)', ''))}</th>" for e in mostrar) + "</tr>")
+    linhas = []
+    for k, (_, r) in enumerate(T.iterrows(), 1):
+        a, b = _times(r["partida"])
+        pj = (f'<span class="pj">{_selo(a, 20)}{html_esc(_time_fmt(a))} <span style="opacity:.5">×</span> {_selo(b, 20)}{html_esc(_time_fmt(b))}</span>'
+              if b else html_esc(str(r["partida"])))
+        cor = COR_FUT.get(r["transmissora"], CINZA)
+        cels = "".join(f"<td class='n' style='{'font-weight:700; color:' + COR_FUT.get(e, TINTA) if e == r['transmissora'] else 'color:' + TINTA2}'>"
+                       f"{br(r[e]) if e in r and pd.notna(r[e]) else '–'}</td>" for e in mostrar)
+        linhas.append(f"<tr><td>{_medalha(k)}</td><td>{_dmy(r['data'])} <span style='color:{CINZA}'>{str(r['dia_semana'])[:3].lower()}</span></td>"
+                      f"<td>{r['hora_inicio']}</td><td>{pj}</td><td>{CURTO_COMP.get(r['competicao'], '')}</td><td>{_chip_em(r['transmissora'])}</td>"
+                      f"<td class='n'><div class='vl'><div class='bar' style='--ec:{cor}; width:{max(4, r['valor'] / mx * 70):.0f}px'></div>"
+                      f"<b>{br(r['valor'])}{suf}</b></div></td>{cels}</tr>")
+    extra = f"<div class='vs' style='margin-top:4px'>Mostrando as {limite} maiores de {len(J)}. O CSV traz todas.</div>" if len(J) > limite else ""
+    st.markdown(f"<div class='fu-tab'><table>{cab}{''.join(linhas)}</table></div>{extra}", unsafe_allow_html=True)
+
+
+def _ficha_time(busca, J, Jcomp, met):
+    """Cartão do time digitado no filtro: jogos, média, mandante × visitante, comparação com a competição e o Ba-Vi."""
+    suf, un = ("%", "p.p.") if met == "Share" else ("", "pt")
+    alvo = futebol._sa(busca)
+    if len(J) == 0:
+        return
+    nome = None
+    for p_ in J["partida"]:
+        for t in _times(p_):
+            if alvo in futebol._sa(t):
+                nome = t
+                break
+        if nome:
+            break
+    nome = nome or busca.upper()
+    casa = J[J["partida"].map(lambda p_: alvo in futebol._sa(_times(p_)[0]))]
+    fora = J[J["partida"].map(lambda p_: alvo in futebol._sa(_times(p_)[1]))]
+    media, comp_m = J["valor"].mean(), Jcomp["valor"].mean()
+    melhor = J.loc[J["valor"].idxmax()]
+    d = media - comp_m
+    num = (f'<div><b>{len(J)}</b><span>transmissões</span></div><div><b>{br(media)}{suf}</b><span>média por jogo</span></div>'
+           f'<div><b style="color:{SOBE if d >= 0 else DESCE}">{sinal(d)}</b><span>{un} vs média das competições</span></div>'
+           f'<div><b>{br(casa["valor"].mean()) if len(casa) else "–"}</b><span>como mandante ({len(casa)})</span></div>'
+           f'<div><b>{br(fora["valor"].mean()) if len(fora) else "–"}</b><span>como visitante ({len(fora)})</span></div>')
+    st.markdown(f'<div class="fu-ficha">{_selo(nome, 64)}<div><div class="nm">{html_esc(_time_fmt(nome))}</div>'
+                f'<div class="sub">melhor jogo: <b>{html_esc(str(melhor["partida"]))}</b> · {br(melhor["valor"])}{suf} em '
+                f'{_dmy(melhor["data"])} ({html_esc(melhor["transmissora"])})</div><div class="num">{num}</div></div></div>',
+                unsafe_allow_html=True)
+    if alvo in ("BAHIA", "VITORIA", "VITORIA BA", "BAVI", "BA VI"):
+        bv = Jcomp[Jcomp["partida"].map(lambda p_: "BAHIA" in futebol._sa(p_) and "VITORIA" in futebol._sa(p_))]
+        if len(bv):
+            top = bv.loc[bv["valor"].idxmax()]
+            st.markdown(f'<div class="fu-ficha fu-bavi"><div style="display:flex; gap:4px">{_selo("BAHIA", 40)}{_selo("VITORIA BA", 40)}</div>'
+                        f'<div><div class="nm">Ba-Vi</div><div class="sub">{len(bv)} clássicos no filtro · média <b>{br(bv["valor"].mean())}{suf}</b> '
+                        f'({sinal(bv["valor"].mean() - comp_m)} {un} vs a média) · maior: <b>{html_esc(str(top["partida"]))}</b>, '
+                        f'{br(top["valor"])}{suf} em {_dmy(top["data"])}</div></div></div>', unsafe_allow_html=True)
+
+
 def pagina_futebol():
+    _css_futebol()
     if FUT.empty:
-        secao(1, "Futebol", "audiência e share dos jogos do Brasileirão Série A e da Seleção Brasileira, com a concorrência")
-        msg = (f"A tabela de futebol ainda não existe no banco ({_ERRO_FUT}); peça à TI para criá-la "
-               "(`python carga_banco.py --url ... --criar`)." if _ERRO_FUT else "Ainda não há jogos de futebol no painel.")
-        st.info(msg + " Baixe a planilha modelo (o mesmo formato das tabelas do BI de partidas), preencha e envie em "
+        secao(1, "Futebol", "audiência e share das transmissões de futebol, com a concorrência (mesma base do BI de partidas)")
+        msg = _msg_tabela("tv_futebol", _ERRO_FUT) if _ERRO_FUT else "Ainda não há jogos de futebol no painel."
+        st.info(msg + " Envie a exportação do Instar Analytics (abas de Rat% e Shr%) ou a planilha modelo em "
                       "**⚙ Atualizar dados → 8 · Futebol**, no rodapé.")
         st.download_button("⬇️ Baixar planilha modelo", futebol.modelo_xlsx(), "modelo_futebol_tv.xlsx", key="fu_modelo_vazio")
         return
     comps_disp = [c for c in futebol.COMPETICOES if c in set(FUT["competicao"])]
-    f = st.columns([2.2, 1.45, 2.1, 1.8, 1.3])
-    comps = f[0].pills("Competição", comps_disp, selection_mode="multi", key="fu_comp", format_func=lambda c: CURTO_COMP.get(c, c),
-                       default=[c for c in comps_disp if c != futebol.SELECAO_F] or comps_disp)
-    met = f[1].selectbox("Métrica", ["Audiência", "Share"], key="fu_met", format_func=lambda m: f"{m} ({tv.SIGLA[m]})")
+    f = st.columns([1.3, 3.2, 2.0])
+    met = f[0].selectbox("Métrica", ["Audiência", "Share"], key="fu_met", format_func=lambda m: f"{m} ({tv.SIGLA[m]})",
+                         help="Como as páginas \"Visão Geral Audiência\" e \"Visão Geral Share\" do BI.")
+    comps = f[1].pills("Competição", comps_disp, selection_mode="multi", key="fu_comp", format_func=lambda c: CURTO_COMP.get(c, c),
+                       default=[c for c in futebol.PRINCIPAIS if c in comps_disp] or comps_disp[:1])
     suf, un = ("%", "p.p.") if met == "Share" else ("", "pt")
     J0 = futebol.jogos(FUT, met)
     if J0.empty:
-        st.info(f"A base de futebol não tem {met.lower()}. Envie a planilha com a aba \"{met}\".")
+        st.info(f"A base de futebol não tem {met.lower()}. Envie a exportação com a aba de {tv.SIGLA[met]}.")
         return
     J0["mes"] = J0["data"].dt.to_period("M").dt.to_timestamp()
     meses = sorted(J0["mes"].unique())
-    ini_padrao = max(meses[0], pd.Timestamp(meses[-1].year - 1, 1, 1))
-    p0, p1 = f[2].select_slider("Período", options=meses, value=(next(m for m in meses if m >= ini_padrao), meses[-1]),
-                                format_func=rot_mes, key="fu_per")
-    trans_disp = [e for e in futebol.EMISSORAS if e in set(J0["transmissora"])]
-    trans = f[3].multiselect("Transmissora", trans_disp, default=trans_disp, key="fu_trans", placeholder="Todas")
-    busca = f[4].text_input("Time", key="fu_time", placeholder="ex.: Bahia").strip()
+    p0, p1 = f[2].select_slider("Período", options=meses, value=(meses[0], meses[-1]), format_func=rot_mes, key="fu_per")
     if not comps:
         st.warning("Escolha ao menos uma competição.")
         return
+    g = st.columns([2.4, 2.2, 2.4, 1.3])
+    quadros_disp = sorted(J0[J0["competicao"].isin(comps)]["quadro"].dropna().unique())
+    quadros = g[0].multiselect("Quadro (como no BI)", quadros_disp, key="fu_quadro", placeholder="Todos os quadros das competições",
+                               format_func=_nome_quadro)
+    trans_disp = [e for e in futebol.EMISSORAS if e in set(J0["transmissora"])]
+    trans = g[1].multiselect("Transmissora", trans_disp, default=trans_disp, key="fu_trans", placeholder="Todas")
+    linhas_disp = [e for e in futebol.EMISSORAS if (e in trans_disp or e in futebol.AGREGADOS) and not (met == "Share" and e.startswith("TLE"))]
+    em_graf = g[2].multiselect("Emissoras nos gráficos", linhas_disp, key="fu_emis",
+                               default=[e for e in linhas_disp if e not in futebol.AGREGADOS],
+                               help="Como o seletor de emissoras do BI. Transmissoras: média dos jogos que cada uma transmitiu. "
+                                    "OCP, sem referência e TLE: média no horário de todos os jogos do filtro.")
+    busca = g[3].text_input("Time", key="fu_time", placeholder="ex.: Bahia").strip()
 
-    def filtra(J, a, b):
+    def filtra(J, a, b, com_time=True):
         x = J[J["competicao"].isin(comps) & J["transmissora"].isin(trans or trans_disp) & (J["mes"] >= a) & (J["mes"] <= b)]
-        if busca:
+        if quadros:
+            x = x[x["quadro"].isin(quadros)]
+        if busca and com_time:
             x = x[x["partida"].map(lambda p: futebol._sa(busca) in futebol._sa(p))]
         return x
 
@@ -2743,35 +2976,61 @@ def pagina_futebol():
     st.session_state["_filtros_fu_txt"] = (f"Futebol · {', '.join(CURTO_COMP.get(c, c) for c in comps)} · {met.lower()} · "
                                            f"{rot_mes(p0)} a {rot_mes(p1)}" + (f" · time: {busca}" if busca else ""))
     if J.empty:
-        st.warning("Nenhum jogo com esses filtros.")
+        st.warning("Nenhuma transmissão com esses filtros.")
         return
-    JA = filtra(J0, p0 - pd.DateOffset(years=1), p1 - pd.DateOffset(years=1))      # mesmo período, um ano antes
-    emis_cols = [e for e in futebol.EMISSORAS if e in J.columns and not (met == "Share" and e == "TLE (total ligados)")]
-
-    # ---- 1. destaques
-    secao(1, "Destaques do período", f"{len(J)} jogos · {rot_mes(p0)} a {rot_mes(p1)} · {met.lower()} da emissora que transmitiu")
+    JA = filtra(J0, p0 - pd.DateOffset(years=1), p1 - pd.DateOffset(years=1))
+    emis_cols = [e for e in futebol.EMISSORAS if e in J.columns and not (met == "Share" and e.startswith("TLE"))]
     top = J.loc[J["valor"].idxmax()]
     por_trans = J.groupby("transmissora")["valor"].agg(["mean", "size"]).reindex([e for e in futebol.EMISSORAS if e in set(J["transmissora"])])
-    lista = [(f"Jogos no período", f"{len(J)}", " · ".join(f"{html_esc(e)}: <b>{int(n)}</b>" for e, n in por_trans["size"].items()), AZUL)]
     principal = futebol.TVB if futebol.TVB in por_trans.index else por_trans.index[0]
     m_atual = por_trans.loc[principal, "mean"]
     m_ant = JA[JA["transmissora"] == principal]["valor"].mean() if len(JA) else np.nan
-    serie_m = J[J["transmissora"] == principal].groupby("mes")["valor"].mean()
-    lista.append((f"Média por jogo · {principal}", f"{br(m_atual)}{suf}",
-                  (_dpt(m_atual, m_ant).replace(" pt", f" {un}") + " vs mesmo período do ano anterior") if pd.notna(m_ant)
-                  else "sem jogos no mesmo período do ano anterior", COR_FUT.get(principal, AZUL), serie_m.tolist()[-13:]))
-    lista.append((f"Maior {met.lower()} · {CURTO_COMP.get(top['competicao'], '')}", f"{br(top['valor'])}{suf}",
-                  f"<b>{_partida_html(top['partida'])}</b><br>{_dmy(top['data'])} ({top['dia_semana'].lower()}) · "
-                  f"{top['hora_inicio']} · {html_esc(top['transmissora'])}", COR_FUT.get(top["transmissora"], AZUL)))
-    por_hora = J.assign(h=J["hora_inicio"].str[:2] + "h").groupby("h")["valor"].agg(["mean", "size"])
-    por_hora = por_hora[por_hora["size"] >= 3] if (por_hora["size"] >= 3).any() else por_hora
-    por_dia = J.groupby("dia_semana")["valor"].agg(["mean", "size"])
-    por_dia = por_dia[por_dia["size"] >= 3] if (por_dia["size"] >= 3).any() else por_dia
-    lista.append(("Melhor horário e dia", f"{por_hora['mean'].idxmax()}",
-                  f"média {br(por_hora['mean'].max())}{suf} · melhor dia: <b>{por_dia['mean'].idxmax().lower()}</b> "
-                  f"({br(por_dia['mean'].max())}{suf})", VERDE))
-    kpis(lista)
-    frases = [f"O jogo de maior {met.lower()} foi <b>{html_esc(top['partida'])}</b>, em {_dmy(top['data'])}, com "
+
+    # ---- placar de abertura
+    horas = sum(_minutos(a, b) for a, b in zip(J["hora_inicio"], J["hora_fim"].fillna(""))) / 60
+    a_, b_ = _times(top["partida"])
+    st.markdown(
+        f'<div class="fu-hero"><div class="tt">⚽ Futebol na TV · {html_esc(" · ".join(CURTO_COMP.get(c, c) for c in comps))}</div>'
+        f'<div class="tg">{rot_mes(p0)} a {rot_mes(p1)}{" · " + html_esc(busca.title()) if busca else ""}</div><div class="placar">'
+        f'<div class="pc"><div class="pl">Transmissões</div><div class="pv">{len(J)}</div><div class="ps">{len(por_trans)} emissoras</div></div>'
+        f'<div class="pc"><div class="pl">Média por jogo · {html_esc(principal.replace(" (Globo)", ""))}</div><div class="pv">{br(m_atual)}</div>'
+        f'<div class="ps">{tv.SIGLA[met]}' + (f' · {sinal(m_atual - m_ant)} {un} vs ano anterior' if pd.notna(m_ant) else "") + '</div></div>'
+        f'<div class="pc"><div class="pl">Maior {met.lower()}</div><div class="pv">{br(top["valor"])}</div>'
+        f'<div class="ps">{html_esc(_time_fmt(a_))}{" × " + html_esc(_time_fmt(b_)) if b_ else ""}</div></div>'
+        f'<div class="pc"><div class="pl">Horas de futebol no ar</div><div class="pv">{br(horas, 0)}</div>'
+        f'<div class="ps">≈ {br(horas / max(len(J), 1) * 60, 0)} min por transmissão</div></div></div></div>', unsafe_allow_html=True)
+    if busca:
+        _ficha_time(busca, J, filtra(J0, p0, p1, com_time=False), met)
+
+    # ---- 1. visão geral (páginas "Visão Geral Audiência / Share" do BI)
+    secao(1, f"Visão geral · {met.lower()}", f"{len(J)} transmissões · média por emissora e o jogo Top 1")
+    c1, c2 = st.columns([2.35, 1])
+    with c1:
+        for chave, tit, kk in (("ano", "por ano", "fu_ano"), ("mes", "por mês", "fu_mes")):
+            with cartao(f"{met} média {tit}", f"{tv.SIGLA[met]} · transmissoras: média dos jogos que transmitiram"):
+                fig = go.Figure()
+                base_ = J.assign(ano=J["data"].dt.year)
+                for e, s in _media_por(base_, chave, em_graf or linhas_disp).items():
+                    x = [str(a) for a in s.index] if chave == "ano" else [rot_mes(m) for m in s.index]
+                    fig.add_scatter(x=x, y=s.values, name=e.replace(" (total ligados)", ""), mode="lines+markers",
+                                    line=dict(color=COR_FUT.get(e, CINZA), width=3 if e == futebol.TVB else 2,
+                                              dash="dot" if e in futebol.AGREGADOS else "solid", shape="spline", smoothing=.6),
+                                    marker=dict(size=7 if chave == "ano" else 5),
+                                    hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y:.2f}}{suf}<extra></extra>")
+                layout(fig, 250, legenda=True)
+                fig.update_xaxes(tickangle=-45 if chave == "mes" else 0, tickfont=dict(size=10))
+                if chave == "ano":
+                    fig.update_xaxes(type="category")
+                st.plotly_chart(fig, config=CFG, key=kk)
+    with c2:
+        st.markdown(_cartao_partida(top, met, f"Top 1 · {met.lower()}"), unsafe_allow_html=True)
+        seg = J.drop(index=top.name).nlargest(4, "valor")
+        st.markdown('<div class="vs" style="margin:12px 0 6px"><b>NA SEQUÊNCIA</b></div>' + "".join(
+            f'<div style="display:flex; align-items:center; gap:8px; padding:6px 2px; border-bottom:1px solid {LINHA}; font-size:.8rem">'
+            f'{_medalha(k)}<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">'
+            f'{html_esc(str(r["partida"]))}</span><b>{br(r["valor"])}{suf}</b></div>' for k, (_, r) in enumerate(seg.iterrows(), 2)),
+            unsafe_allow_html=True)
+    frases = [f"A transmissão de maior {met.lower()} foi <b>{html_esc(top['partida'])}</b>, em {_dmy(top['data'])}, com "
               f"<b>{br(top['valor'])}{suf}</b> na {html_esc(top['transmissora'])}."]
     if len(por_trans) > 1:
         dif = por_trans["mean"].sort_values(ascending=False)
@@ -2780,117 +3039,163 @@ def pagina_futebol():
     if pd.notna(m_ant):
         d_ = m_atual - m_ant
         frases.append(f"A média por jogo da {principal} {'subiu' if d_ > 0 else 'caiu'}: {'alta' if d_ > 0 else 'queda'} de "
-                      f"{br(abs(d_))} {un} vs o mesmo período do ano anterior ({len(JA[JA['transmissora'] == principal])} jogos).")
-    if len(comps) > 1 and J["competicao"].nunique() > 1:
-        pc = J.groupby("competicao")["valor"].mean().sort_values(ascending=False)
-        frases.append(f"Por competição: " + "; ".join(f"<b>{CURTO_COMP.get(c, c)}</b> {br(v)}{suf}" for c, v in pc.items()) + " de média.")
-    with cartao("Resumo", f"{len(J)} jogos · {met.lower()}"):
+                      f"{br(abs(d_))} {un} vs o mesmo período do ano anterior.")
+    if J["competicao"].nunique() > 1:
+        pc = J[J["transmissora"] == principal].groupby("competicao")["valor"].mean().sort_values(ascending=False)
+        if len(pc) > 1:
+            frases.append(f"Na {principal}, por competição: " + "; ".join(f"<b>{CURTO_COMP.get(c, c)}</b> {br(v)}{suf}" for c, v in pc.items()) + ".")
+    with cartao("Resumo", f"{len(J)} transmissões · {met.lower()}"):
         st.markdown('<ul class="resumo">' + "".join(
             f'<li><span class="ic {_icone_resumo(f_)[1]}">{_icone_resumo(f_)[0]}</span><span>{f_}</span></li>' for f_ in frases)
             + "</ul>", unsafe_allow_html=True)
 
-    # ---- 2. evolução
-    secao(2, "Evolução", "média por jogo de cada transmissora e quantidade de jogos")
-    agr = st.radio("Agrupar por", ["Mês", "Ano"], horizontal=True, key="fu_agr", label_visibility="collapsed")
-    chave_t = "mes" if agr == "Mês" else "ano"
-    c1, c2 = st.columns([1.35, 1])
-    with c1, cartao(f"{met} média por jogo", f"{tv.SIGLA[met]} da transmissora · por {agr.lower()}"):
+    # ---- 2. linha do tempo
+    secao(2, "Linha do tempo das transmissões", "cada ponto é uma transmissão · tamanho = valor · os picos ganham o nome do jogo")
+    with cartao(f"{met} de cada transmissão", f"{tv.SIGLA[met]} da emissora que transmitiu · passe o mouse para ver o jogo"):
         fig = go.Figure()
+        vmax = J["valor"].max() or 1
         for e in [x for x in futebol.EMISSORAS if x in set(J["transmissora"])]:
-            s = J[J["transmissora"] == e].groupby(chave_t)["valor"].agg(["mean", "size"])
-            x = [rot_mes(m) for m in s.index] if chave_t == "mes" else [str(a) for a in s.index]
-            fig.add_scatter(x=x, y=s["mean"].values, name=e, mode="lines+markers", customdata=s["size"].values,
-                            line=dict(color=COR_FUT.get(e, CINZA), width=3 if e == futebol.TVB else 2),
-                            hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y:.2f}}{suf} · %{{customdata}} jogos<extra></extra>")
-        layout(fig, 320, legenda=True)
-        fig.update_xaxes(tickangle=-45 if chave_t == "mes" else 0, tickfont=dict(size=10))
-        st.plotly_chart(fig, config=CFG, key="fu_evol")
-    with c2, cartao("Jogos transmitidos", f"por {agr.lower()} e transmissora"):
-        cont = J.pivot_table(index=chave_t, columns="transmissora", values="partida", aggfunc="count").fillna(0)
+            x = J[J["transmissora"] == e]
+            fig.add_scatter(x=x["data"], y=x["valor"], mode="markers", name=e,
+                            marker=dict(size=6 + 18 * np.sqrt(x["valor"].clip(lower=0) / vmax), color=COR_FUT.get(e, CINZA),
+                                        opacity=.78, line=dict(width=1, color=CARTAO)),
+                            customdata=np.stack([x["partida"], x["hora_inicio"], x["competicao"].map(lambda c: CURTO_COMP.get(c, c))], axis=-1),
+                            hovertemplate="<b>%{customdata[0]}</b><br>%{x|%d/%m/%Y} · %{customdata[1]} · %{customdata[2]}<br>"
+                                          f"{e}: %{{y:.2f}}{suf}<extra></extra>")
+        picos = []                                              # até 3 picos, afastados no tempo (sem rótulos encavalados)
+        for _, r in J.sort_values("valor", ascending=False).iterrows():
+            if all(abs((r["data"] - q["data"]).days) > 75 for q in picos):
+                picos.append(r)
+            if len(picos) == 3:
+                break
+        for k, r in enumerate(picos):
+            a_p, b_p = _times(r["partida"])
+            fig.add_annotation(x=r["data"], y=r["valor"], text=f"{_time_fmt(a_p)} × {_time_fmt(b_p)}" if b_p else _time_fmt(a_p),
+                               showarrow=True, arrowhead=0, ax=0, ay=-24 - 14 * k, font=dict(size=10, color=TINTA2),
+                               arrowcolor=CINZA_CLARO, bgcolor=CARTAO, borderpad=2)
+        layout(fig, 360, legenda=True)
+        ini_t, fim_t = J["data"].min(), J["data"].max()
+        marcas = [m for m in pd.date_range(ini_t.to_period("M").to_timestamp(), fim_t, freq="MS")
+                  if m.month in ((1, 7) if (fim_t - ini_t).days > 540 else (1, 4, 7, 10))]
+        fig.update_xaxes(tickvals=marcas, ticktext=[rot_mes(m) for m in marcas])                # datas em português
+        st.plotly_chart(fig, config=CFG, key="fu_linha_tempo")
+
+    # ---- 3. visão por emissora (página "Visão Geral Emissora" do BI)
+    secao(3, "Visão por emissora", "média por jogo e quantidade de transmissões de cada emissora")
+    serie_m = J[J["transmissora"] == principal].groupby("mes")["valor"].mean()
+    camp = J.groupby("quadro")["valor"].agg(["mean", "size"])
+    camp = camp[camp["size"] >= 3] if (camp["size"] >= 3).any() else camp
+    por_hora = J.assign(h=J["hora_inicio"].str[:2] + "h").groupby("h")["valor"].agg(["mean", "size"])
+    por_hora = por_hora[por_hora["size"] >= 3] if (por_hora["size"] >= 3).any() else por_hora
+    por_mes = J.groupby("mes")["valor"].mean()
+    kpis([(f"Média por jogo · {principal}", f"{br(m_atual)}{suf}",
+           (_dpt(m_atual, m_ant).replace(" pt", f" {un}") + " vs mesmo período do ano anterior") if pd.notna(m_ant)
+           else f"{int(por_trans.loc[principal, 'size'])} transmissões", COR_FUT.get(principal, AZUL), serie_m.tolist()[-13:]),
+          ("Transmissões", f"{len(J)}", " ".join(_chip_em(e) + f" <b>{int(n)}</b>" for e, n in por_trans["size"].items()), AZUL),
+          ("Melhor campeonato", f'<span style="font-size:1.05rem">{html_esc(_nome_quadro(camp["mean"].idxmax()))}</span>',
+           f"média {br(camp['mean'].max())}{suf} · {int(camp.loc[camp['mean'].idxmax(), 'size'])} transmissões", VERDE),
+          ("Melhor horário e mês", f"{por_hora['mean'].idxmax()}", f"média {br(por_hora['mean'].max())}{suf} · melhor mês: <b>{rot_mes(por_mes.idxmax())}</b>", AMARELO)])
+    c1, c2 = st.columns([1, 1.35])
+    with c1, cartao("Média e transmissões por emissora", f"colunas: {tv.SIGLA[met]} médio por jogo · linha: número de transmissões"):
         fig = go.Figure()
-        for e in [x for x in futebol.EMISSORAS if x in cont.columns]:
-            fig.add_bar(x=[rot_mes(m) for m in cont.index] if chave_t == "mes" else [str(a) for a in cont.index], y=cont[e].values,
-                        name=e, marker_color=COR_FUT.get(e, CINZA), hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y}} jogos<extra></extra>")
-        layout(fig, 320, legenda=True).update_layout(barmode="stack", bargap=.2)
-        fig.update_yaxes(tickformat=",.0f", dtick=max(1, int(cont.sum(axis=1).max() // 5) or 1))
-        fig.update_xaxes(tickangle=-45 if chave_t == "mes" else 0, tickfont=dict(size=10))
-        st.plotly_chart(fig, config=CFG, key="fu_qtd")
+        fig.add_bar(x=[e.replace(" (Globo)", "") for e in por_trans.index], y=por_trans["mean"].values, name=f"média ({tv.SIGLA[met]})",
+                    marker_color=[COR_FUT.get(e, CINZA) for e in por_trans.index], text=[br(v) for v in por_trans["mean"]],
+                    textposition="inside", insidetextanchor="middle", textfont=dict(size=12, color="#ffffff"),
+                    hovertemplate="%{x}: %{y:.2f}" + suf + "<extra></extra>")
+        fig.add_scatter(x=[e.replace(" (Globo)", "") for e in por_trans.index], y=por_trans["size"].values, name="transmissões", yaxis="y2",
+                        mode="lines+markers", line=dict(color=TINTA2, width=2), marker=dict(size=8, symbol="diamond"),
+                        hovertemplate="%{x}: %{y} transmissões<extra></extra>")
+        layout(fig, 320, legenda=True)
+        fig.update_layout(yaxis2=dict(overlaying="y", side="right", showgrid=False, tickfont=dict(size=10), rangemode="tozero",
+                                      automargin=True, tickformat=",.0f"), margin=dict(r=40))
+        st.plotly_chart(fig, config=CFG, key="fu_combo")
+    longo = J["mes"].nunique() > 18
+    with c2, cartao(f"{met} média por {'trimestre' if longo else 'mês'} e emissora", f"{tv.SIGLA[met]} da transmissora · colunas agrupadas"):
+        Jt = J.assign(t=J["data"].dt.to_period("Q").dt.to_timestamp() if longo else J["mes"])
+        piv = Jt.pivot_table(index="t", columns="transmissora", values="valor", aggfunc="mean")
+        rot_t = (lambda m: f"{(m.month - 1) // 3 + 1}T{str(m.year)[2:]}") if longo else rot_mes
+        fig = go.Figure()
+        for e in [x for x in futebol.EMISSORAS if x in piv.columns]:
+            fig.add_bar(x=[rot_t(m) for m in piv.index], y=piv[e].values, name=e, marker_color=COR_FUT.get(e, CINZA),
+                        hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y:.2f}}{suf}<extra></extra>")
+        layout(fig, 320, legenda=True).update_layout(barmode="group", bargap=.2, bargroupgap=.05)
+        fig.update_xaxes(tickangle=-45 if len(piv) > 8 else 0, tickfont=dict(size=10))
+        st.plotly_chart(fig, config=CFG, key="fu_mes_emis")
 
-    # ---- 3. jogos
-    secao(3, "Jogos", f"os de maior {met.lower()} no período e o que cada emissora marcou no mesmo horário")
-    with cartao(f"Top 15 · {met.lower()}", "valor da transmissora em destaque · ordenado do maior para o menor"):
-        T = J.nlargest(15, "valor")
-        mostrar = [e for e in emis_cols if e not in ("Sem referência",)]
-        cab = ("<tr><th></th><th>Data</th><th>Hora</th><th>Partida</th><th>Comp.</th><th>Transmissora</th><th class='n'>Valor</th>"
-               + "".join(f"<th class='n'>{html_esc(e.replace(' (Globo)', '').replace(' (total ligados)', ''))}</th>" for e in mostrar) + "</tr>")
-        linhas = ""
-        for k, (_, r) in enumerate(T.iterrows(), 1):
-            cels = "".join(
-                f"<td class='n' style='{'font-weight:700; color:' + COR_FUT.get(e, TINTA) if e == r['transmissora'] else ''}'>"
-                f"{br(r[e]) if e in r and pd.notna(r[e]) else '–'}</td>" for e in mostrar)
-            linhas += (f"<tr><td>{_medalha(k)}</td><td>{_dmy(r['data'])} <span style='color:{CINZA}'>{r['dia_semana'][:3].lower()}</span>"
-                       f"</td><td>{r['hora_inicio']}</td><td>{_partida_html(r['partida'])}</td><td>{CURTO_COMP.get(r['competicao'], '')}</td>"
-                       f"<td><span style='color:{COR_FUT.get(r['transmissora'], CINZA)}'>■</span> {html_esc(r['transmissora'])}</td>"
-                       f"<td class='n'><b>{br(r['valor'])}{suf}</b></td>{cels}</tr>")
-        st.markdown(f"<div style='overflow-x:auto'><table class='rk'>{cab}{linhas}</table></div>", unsafe_allow_html=True)
-        exp = J[["data", "dia_semana", "hora_inicio", "partida", "competicao", "transmissora", "valor"] + emis_cols].copy()
-        exp["data"] = exp["data"].dt.strftime("%d/%m/%Y")
-        st.download_button(f"⬇️ Baixar os {len(exp)} jogos do filtro (CSV)", exp.to_csv(index=False, sep=";", decimal=",").encode("utf-8-sig"),
-                           f"futebol_{met.lower()}_{p0:%Y%m}_{p1:%Y%m}.csv", key="fu_csv")
+    # ---- 4. partidas (as tabelas do BI, em estilo de classificação)
+    secao(4, "Partidas", "todas as transmissões do filtro, da maior para a menor, com o que cada emissora marcou no mesmo horário")
+    abas_t = st.tabs([f"🏆 {m_}" for m_ in ("Audiência", "Share")])
+    for aba_t, m_ in zip(abas_t, ("Audiência", "Share")):
+        with aba_t:
+            Jm = futebol.jogos(FUT, m_)
+            if Jm.empty:
+                st.info(f"Sem {m_.lower()} na base.")
+                continue
+            Jm["mes"] = Jm["data"].dt.to_period("M").dt.to_timestamp()
+            Jm = filtra(Jm, p0, p1)
+            _tabela_classificacao(Jm, m_, [e for e in futebol.EMISSORAS if e in Jm.columns and not (m_ == "Share" and e.startswith("TLE"))])
+    exp = J[["data", "dia_semana", "hora_inicio", "partida", "quadro", "competicao", "transmissora", "valor"] + emis_cols].copy()
+    exp["data"] = exp["data"].dt.strftime("%d/%m/%Y")
+    st.download_button(f"⬇️ Baixar as {len(exp)} transmissões do filtro ({met.lower()}, CSV)",
+                       exp.to_csv(index=False, sep=";", decimal=",").encode("utf-8-sig"), f"futebol_{met.lower()}_{p0:%Y%m}_{p1:%Y%m}.csv",
+                       key="fu_csv")
 
-    # ---- 4. concorrência durante os jogos
-    secao(4, "Concorrência durante os jogos", "média de cada emissora no horário dos jogos, por transmissora")
+    # ---- 5. concorrência durante os jogos
+    secao(5, "Concorrência durante os jogos", "média de cada emissora no horário dos jogos e vantagem da transmissora")
     c1, c2 = st.columns([1.3, 1])
     tle_m = J["TLE (total ligados)"].mean() if "TLE (total ligados)" in J.columns and met == "Audiência" else None
     with c1, cartao(f"{met} de cada emissora", f"{tv.SIGLA[met]} médio no horário dos jogos de cada transmissora"
                     + (f" · TVs ligadas (TLE): {br(tle_m)}" if tle_m is not None and pd.notna(tle_m) else "")):
         grupos = [x for x in futebol.EMISSORAS if x in set(J["transmissora"])]
         fig = go.Figure()
-        for e in [x for x in emis_cols if x not in ("Sem referência", "TLE (total ligados)")]:     # o TLE achataria as barras
-            ys = [J[J["transmissora"] == g][e].mean() if e in J.columns else np.nan for g in grupos]
-            fig.add_bar(x=[f"Jogos na {g}" for g in grupos], y=ys, name=e.replace(" (total ligados)", ""), marker_color=COR_FUT.get(e, CINZA),
-                        hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y:.2f}}{suf}<extra></extra>")
+        for e in [x for x in emis_cols if x not in ("Sem referência", "TLE (total ligados)")]:
+            fig.add_bar(x=[f"Jogos na {g_.replace(' (Globo)', '')}" for g_ in grupos], y=[J[J["transmissora"] == g_][e].mean() for g_ in grupos],
+                        name=e, marker_color=COR_FUT.get(e, CINZA), hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y:.2f}}{suf}<extra></extra>")
         layout(fig, 320, legenda=True).update_layout(barmode="group", bargap=.25, bargroupgap=.06)
         st.plotly_chart(fig, config=CFG, key="fu_conc")
     with c2, cartao("Vantagem da transmissora", f"transmissora − 2ª emissora mais vista no mesmo horário · {un}"):
         rivais_cols = [e for e in emis_cols if e not in futebol.AGREGADOS]
         van = []
         for _, r in J.iterrows():
-            outros = [r[e] for e in rivais_cols if e != r["transmissora"] and e in r and pd.notna(r[e])]
+            outros = [r[e] for e in rivais_cols if e != r["transmissora"] and pd.notna(r.get(e))]
             if outros and pd.notna(r["valor"]):
                 van.append((r["transmissora"], r["competicao"], r["valor"] - max(outros)))
         V = pd.DataFrame(van, columns=["t", "c", "v"])
         fig = go.Figure()
         if len(V):
-            g = V.groupby(["t", "c"])["v"].mean().reset_index()
-            for c in [x for x in futebol.COMPETICOES if x in set(g["c"])]:
-                gc = g[g["c"] == c]
-                fig.add_bar(x=gc["t"], y=gc["v"], name=CURTO_COMP.get(c, c), text=[sinal(v, 1) for v in gc["v"]], textposition="outside",
-                            textfont=dict(size=10), cliponaxis=False,
-                            marker_color={futebol.SERIE_A: AZUL, futebol.SELECAO: VERDE, futebol.SELECAO_F: "#e87ba4"}.get(c, CINZA),
-                            hovertemplate=f"<b>{CURTO_COMP.get(c, c)}</b> · %{{x}}: %{{y:+.2f}} {un}<extra></extra>")
-        layout(fig, 320, legenda=True).update_layout(barmode="group", bargap=.35)
+            gm = V.groupby(["t", "c"])["v"].mean().reset_index()
+            cores_c = {futebol.SERIE_A: AZUL, futebol.SELECAO: VERDE, futebol.SELECAO_F: "#e87ba4", futebol.COPA: "#00a3a3",
+                       futebol.OUTROS: "#9aa3b5", futebol.PRE_POS: "#c7ccd6"}
+            for c in [x for x in futebol.COMPETICOES if x in set(gm["c"])]:
+                gc = gm[gm["c"] == c]
+                fig.add_bar(x=[t.replace(" (Globo)", "") for t in gc["t"]], y=gc["v"], name=CURTO_COMP.get(c, c),
+                            text=[sinal(v, 1) for v in gc["v"]], textposition="outside", textfont=dict(size=10), cliponaxis=False,
+                            marker_color=cores_c.get(c, CINZA), hovertemplate=f"<b>{CURTO_COMP.get(c, c)}</b> · %{{x}}: %{{y:+.2f}} {un}<extra></extra>")
+        layout(fig, 320, legenda=True).update_layout(barmode="group", bargap=.3)
         st.plotly_chart(fig, config=CFG, key="fu_vant")
 
-    # ---- 5. dia e horário
-    secao(5, "Dia e horário", f"{met.lower()} médio por dia da semana e por horário de início")
-    c1, c2 = st.columns(2)
-    for col, campo, ordem_x, tit, chave in (
-            (c1, "dia_semana", futebol.DIAS, "Por dia da semana", "fu_dia"),
-            (c2, "h", sorted(J["hora_inicio"].str[:2].unique()), "Por horário de início", "fu_hora")):
-        with col, cartao(tit, f"média por jogo · {tv.SIGLA[met]} · número de jogos nas barras"):
-            base_ = J.assign(h=J["hora_inicio"].str[:2])
-            g = base_.groupby(campo)["valor"].agg(["mean", "size"]).reindex([o for o in ordem_x if o in set(base_[campo])])
-            rot = [o if campo == "dia_semana" else f"{o}h" for o in g.index]
-            fig = go.Figure(go.Bar(x=rot, y=g["mean"].values, marker_color=AZUL, text=[f"{n} jogo{'s' if n != 1 else ''}" for n in g["size"]],
-                                   textposition="inside", insidetextanchor="end", textfont=dict(size=9, color="#ffffff"),
-                                   hovertemplate="%{x}: %{y:.2f}" + suf + "<extra></extra>"))
-            layout(fig, 280)
-            st.plotly_chart(fig, config=CFG, key=chave)
-    st.markdown('<div class="rodape">Fonte: Kantar IBOPE (Instar), mesma base do BI "Relatório Partidas Futebol" · TT Domicílios · '
-                'Grande Salvador. Valor do jogo = o da emissora que transmitiu ("Reference:" no BI); as demais colunas mostram o que '
-                'cada emissora marcou no mesmo horário. OCP, "Sem referência" e TLE (total de TVs ligadas) são agregados, '
-                'fora da disputa da vantagem.</div>', unsafe_allow_html=True)
+    # ---- 6. quando o futebol rende mais
+    secao(6, "Quando o futebol rende mais", f"{met.lower()} médio por dia da semana e horário de início · número de transmissões em cada célula")
+    base_ = J.assign(h=J["hora_inicio"].str[:2] + "h")
+    horas_x = sorted(base_["h"].unique())
+    dias_y = [d for d in futebol.DIAS if d in set(base_["dia_semana"])]
+    z = base_.pivot_table(index="dia_semana", columns="h", values="valor", aggfunc="mean").reindex(index=dias_y, columns=horas_x)
+    n = base_.pivot_table(index="dia_semana", columns="h", values="valor", aggfunc="size").reindex(index=dias_y, columns=horas_x)
+    with cartao("Dia da semana × horário de início", f"cor = {tv.SIGLA[met]} médio por transmissão · células vazias: sem jogo"):
+        txt = [[(f"{br(v)}<br><span style='font-size:9px'>{int(k)} jogo{'s' if k != 1 else ''}</span>" if pd.notna(v) else "")
+                for v, k in zip(zr, nr)] for zr, nr in zip(z.values, n.fillna(0).values)]
+        fig = go.Figure(go.Heatmap(z=z.values, x=horas_x, y=dias_y, colorscale=SEQ, text=txt, texttemplate="%{text}",
+                                   textfont=dict(size=10), xgap=3, ygap=3, showscale=False, hoverongaps=False,
+                                   hovertemplate="%{y} · %{x}: %{z:.2f}" + suf + "<extra></extra>"))
+        layout(fig, 60 + 46 * len(dias_y))
+        fig.update_yaxes(autorange="reversed", tickformat="", gridcolor="rgba(0,0,0,0)")
+        fig.update_xaxes(side="top", gridcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig, config=CFG, key="fu_calor")
+    st.markdown('<div class="rodape">Fonte: Kantar IBOPE (Instar Analytics), "Competição de Faixas Horárias" · Total Domicílios · '
+                'Grande Salvador · Live, a mesma base do BI "Relatório Partidas Futebol". Valor da transmissão = o da emissora que '
+                'transmitiu; as demais colunas mostram cada emissora no mesmo horário. OCP, "sem referência" e TLE (total de TVs '
+                'ligadas) são agregados e ficam fora da vantagem. Jogos transmitidos por duas emissoras aparecem uma vez por emissora. '
+                'Os selos com as iniciais substituem os escudos, que são marcas dos clubes.</div>', unsafe_allow_html=True)
 
 
 with paginas[3]:
@@ -2956,7 +3261,19 @@ def _salvar_par(par, msg):
 
 
 @protegido("audiencia.upload", "tv_audiencia_mensal")
-def _salvar_base(nova, descricao):
+def _salvar_base(nova, descricao, enviados=None):
+    """Grava a base mensal. Com o banco ligado, as linhas enviadas vão para a tabela tv_audiencia_mensal (substitui pela
+    chave programa + métrica + mês); na demonstração, a base inteira vai para o CSV local (com cópia da anterior)."""
+    if _banco_ativo() and not MODO_DEMO:
+        try:
+            banco.gravar("tv_audiencia_mensal", (enviados if enviados is not None else nova).reindex(columns=tv.COLUNAS))
+        except Exception as ex:
+            st.session_state["msg_erro"] = f"Não consegui gravar os dados mensais no banco de dados ({ex.__class__.__name__})."
+            return False
+        par = dict(PAR)
+        par["dados"] = {"descricao": descricao, "atualizado_em": datetime.now().strftime("%d/%m/%Y %H:%M")}
+        _salvar_par(par, f"Parâmetros: {descricao}")
+        return True
     os.makedirs("backups", exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     if os.path.exists(ARQ_BASE):
@@ -3090,10 +3407,11 @@ def pagina_atualizar():
                     "a planilha consolidada do ano (ex.: prog_e_faixa_jan_a_set.xlsx): nome da faixa/programa na 1ª linha, "
                     "AUDIÊNCIA e SHARE na 2ª e o mês à esquerda de cada bloco. Meses revisados pela Kantar substituem os antigos. "
                     "Também aceita a planilha do Instar com a coluna Datas e Rat%/Shr% (uma aba por faixa, ex.: 07h às 24h)."):
-        if _banco_ativo():
-            st.info("**Dados mensais vindos do banco de dados da empresa**, carregados pela aplicação de carga da TI. "
-                    "Aqui ficam só as rodadas da projeção, a rodada exibida e as metas mensais do BI.")
-        else:
+        if _banco_ativo() and not MODO_DEMO:
+            st.markdown('<div class="vs">Os meses enviados aqui são gravados na tabela <b>tv_audiencia_mensal</b> do banco '
+                        '(substituem os mesmos meses) e ficam na auditoria. A carga da TI continua funcionando em paralelo.</div>',
+                        unsafe_allow_html=True)
+        if True:
             up = st.file_uploader("Planilha consolidada", type=["xlsx"], key=f"up_mes_{N}")
             ano_up = st.number_input("Ano da planilha", min_value=2015, max_value=2100, value=int(ANO), step=1, key="ano_up")
             if up is not None:
@@ -3122,8 +3440,8 @@ def pagina_atualizar():
                             if not _permissao_ok("pw_mes"):
                                 st.error("Seu perfil permite apenas consulta.")
                             else:
-                                _salvar_base(m, f"upload {up.name}")
-                                _recarrega(f"Base mensal atualizada: {len(n)} novos, {len(a)} alterados.")
+                                if _salvar_base(m, f"upload {up.name}", enviados=novo) is not False:
+                                    _recarrega(f"Base mensal atualizada: {len(n)} novos, {len(a)} alterados.")
                 except Exception as ex:
                     st.error(f"Não consegui ler a planilha: {ex}")
 
@@ -3218,7 +3536,10 @@ def pagina_atualizar():
     # ---- 6. versões anteriores
     with c2, cartao("6 · Versões anteriores da base mensal", "cada atualização guarda uma cópia da base anterior"):
         bks = sorted(glob.glob(os.path.join("backups", "tv_mensal_*.csv")), reverse=True)
-        if not bks:
+        if _banco_ativo() and not MODO_DEMO:
+            st.markdown('<div class="vs">Com o banco de dados, as versões anteriores ficam no backup do banco, com a TI. '
+                        'Cada envio fica registrado na auditoria.</div>', unsafe_allow_html=True)
+        elif not bks:
             st.markdown('<div class="vs">Nenhuma versão anterior ainda.</div>', unsafe_allow_html=True)
         else:
             rot = lambda b: datetime.strptime(os.path.basename(b)[10:25], "%Y%m%d_%H%M%S").strftime("%d/%m/%Y %H:%M:%S")  # noqa: E731
@@ -3263,12 +3584,13 @@ def pagina_atualizar():
 
     # ---- 8. futebol
     with cartao("8 · Futebol",
-                "mesmo formato das tabelas do BI de partidas (abas Audiência e Share) · .xlsx ou .csv. Só Série A e Seleção "
-                "entram; jogos já existentes (data+hora+partida) são substituídos."):
+                "exportação do Instar Analytics (\"Competição de Faixas Horárias\", abas de Rat% e Shr%) ou tabelas do BI de "
+                "partidas · .xlsx ou .csv. Todos os campeonatos entram (a aba abre em Série A e Seleção); transmissões já "
+                "existentes (data + hora + partida + emissora) são substituídas."):
         cf = st.columns([1, 3])
         cf[0].download_button("⬇️ Planilha modelo", futebol.modelo_xlsx(), "modelo_futebol_tv.xlsx", key="fu_modelo")
         if len(FUT):
-            nj = FUT[["data", "hora_inicio", "partida"]].drop_duplicates().shape[0]
+            nj = FUT[futebol.JOGO].drop_duplicates().shape[0]
             cf[1].markdown(f'<div class="vs" style="margin-top:8px">No painel: {nj} jogos · '
                            f'{", ".join(CURTO_COMP.get(c, c) for c in futebol.COMPETICOES if c in set(FUT["competicao"]))} · '
                            f'{_dmy(FUT["data"].min())} a {_dmy(FUT["data"].max())}</div>', unsafe_allow_html=True)
@@ -3280,9 +3602,9 @@ def pagina_atualizar():
                     st.warning(a)
                 if not novo.empty:
                     m, n, a = futebol.mesclar(FUT, novo)
-                    nj = novo[["data", "hora_inicio", "partida"]].drop_duplicates()
+                    nj = novo[futebol.JOGO].drop_duplicates()
                     st.markdown(f"<div class='leitura'>{len(nj)} jogos · "
-                                f"{', '.join(f'{CURTO_COMP.get(c, c)}: {k}' for c, k in novo.drop_duplicates(['data', 'hora_inicio', 'partida'])['competicao'].value_counts().items())}"
+                                f"{', '.join(f'{CURTO_COMP.get(c, c)}: {k}' for c, k in novo.drop_duplicates(futebol.JOGO)['competicao'].value_counts().items())}"
                                 f" · {_dmy(novo['data'].min())} a {_dmy(novo['data'].max())} · <b>{n}</b> novos · <b>{a}</b> alterados</div>",
                                 unsafe_allow_html=True)
                     if st.button("Gravar jogos", type="primary", key="bt_fu", disabled=not (n or a)):
@@ -3365,7 +3687,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "12/11/2026 · Labs · futebol (Série A e Seleção)"
+VERSAO_PAINEL = "24/11/2026 · Labs · futebol com visual novo (placar, partidas, linha do tempo)"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
