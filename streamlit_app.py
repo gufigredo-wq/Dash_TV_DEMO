@@ -923,7 +923,9 @@ _EFEITOS_JS = r"""
     D.querySelectorAll(".js-plotly-plot").forEach(gd => {
       if (!gd.offsetParent) return;
       const w = Math.round(gd.getBoundingClientRect().width), sc = gd.querySelector(".svg-container");
-      if (w > 50 && sc && Math.abs(sc.getBoundingClientRect().width - w) > 2) {
+      // no máximo um ajuste por gráfico e por largura (nunca fica redesenhando o mesmo gráfico)
+      if (w > 50 && sc && Math.abs(sc.getBoundingClientRect().width - w) > 2 && gd.__larguraAjustada !== w) {
+        gd.__larguraAjustada = w;
         try { P.Plotly.relayout(gd, {width: w}); } catch (e) {}
       }
     });
@@ -3078,7 +3080,7 @@ def pagina_futebol():
         vmax = J["valor"].max() or 1
         for e in [x for x in futebol.EMISSORAS if x in set(J["transmissora"])]:
             x = J[J["transmissora"] == e]
-            fig.add_scatter(x=x["data"], y=x["valor"], mode="markers", name=e,
+            fig.add_scatter(x=x["data"], y=x["valor"], mode="markers", name=e, cliponaxis=False,     # pontos sempre visíveis
                             marker=dict(size=6 + 18 * np.sqrt(x["valor"].clip(lower=0) / vmax), color=COR_FUT.get(e, CINZA),
                                         opacity=.78, line=dict(width=1, color=CARTAO)),
                             customdata=np.stack([x["partida"].map(_partida_txt), x["hora_inicio"], x["competicao"].map(lambda c: CURTO_COMP.get(c, c))], axis=-1),
@@ -3709,7 +3711,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "25/11/2026 · Labs · bandeiras e cores dos times no futebol, PIPECO sobre futebol"
+VERSAO_PAINEL = "25/11/2026 · Labs · listras verticais (Vitória, Sport, Athletico), linha do tempo estável"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
