@@ -19,14 +19,17 @@ import pandas as pd
 
 COLUNAS = ["data", "hora_inicio", "hora_fim", "dia_semana", "nome", "partida", "quadro", "competicao", "transmissora",
            "metrica", "emissora", "valor", "origem"]
-CHAVE = ["data", "hora_inicio", "partida", "metrica", "emissora"]
+CHAVE = ["data", "hora_inicio", "partida", "transmissora", "metrica", "emissora"]
+JOGO = ["data", "hora_inicio", "partida", "transmissora"]   # o mesmo jogo pode passar em duas emissoras ao mesmo tempo
 
 SERIE_A, SELECAO, SELECAO_F = "Brasileirão Série A", "Seleção Brasileira", "Seleção Brasileira (feminina)"
-COMPETICOES = [SERIE_A, SELECAO, SELECAO_F]
+COPA, OUTROS, PRE_POS = "Copa do Mundo (outras seleções)", "Outros campeonatos", "Pré-jogo, pós-jogo e VT"
+COMPETICOES = [SERIE_A, SELECAO, SELECAO_F, COPA, OUTROS, PRE_POS]
+PRINCIPAIS = [SERIE_A, SELECAO]               # o padrão do filtro (o foco do painel)
 
 TVB = "TV Bahia (Globo)"
 # coluna do BI -> nome no painel (a ordem é a das legendas)
-COLUNAS_BI = {"GLOBO": TVB, "RECORD": "Record", "SBT": "SBT", "TV BAND": "Band", "OCP": "OCP",
+COLUNAS_BI = {"GLOBO": TVB, "RECORD": "Record", "SBT": "SBT", "TV BAND": "Band", "TVE BAHIA": "TVE Bahia", "OCP": "OCP",
               "Conteúdo de TV/Vídeo sem referência": "Sem referência", "Total Ligados Especial": "TLE (total ligados)"}
 TRANSMISSORAS = {"GLOBO": TVB, "RECORD": "Record", "SBT": "SBT", "TV BAND": "Band", "TVE BAHIA": "TVE Bahia"}
 EMISSORAS = [TVB, "Record", "SBT", "Band", "TVE Bahia", "OCP", "Sem referência", "TLE (total ligados)"]
@@ -38,18 +41,25 @@ def _sa(t):
     return unicodedata.normalize("NFKD", str(t)).encode("ascii", "ignore").decode().upper().strip()
 
 
-def classifica(quadro, partida=""):
-    """Quadro do Instar (+ partida) -> competição do painel, ou None (outros campeonatos ficam fora)."""
-    q, p = _sa(quadro), _sa(partida)
-    if "SEL BRAS" in q:
-        return SELECAO_F if "FEM" in q else SELECAO
-    if ("ELIMINAT COPA MUNDO" in q or "COPA DO MUNDO" in q or "COPA MUNDO" in q) and "MUNDIAL CLUBES" not in q:
-        if "BRASIL" in p.replace("BRASILIENSE", ""):
-            return SELECAO_F if "FEM" in q else SELECAO
+def classifica(quadro, partida="", nome=""):
+    """Quadro do Instar (+ partida e nome do programa) -> competição do painel. Nada fica de fora: o que não é Série A
+    nem Seleção vai para "Copa do Mundo (outras seleções)", "Outros campeonatos" ou "Pré-jogo, pós-jogo e VT"."""
+    q, p, n = _sa(quadro), _sa(partida), _sa(nome)
+    if not q:
         return None
+    if q.startswith(("PRE JOGO", "POS JOGO")) or q.endswith(" VT") or " VT " in q:
+        return PRE_POS
+    fem = "FEM" in q or "FEMININA" in n
+    brasil = "BRASIL" in p.replace("BRASILIENSE", "")
+    if "SEL BRAS" in q:
+        return SELECAO_F if fem else SELECAO
+    if ("ELIMINAT COPA MUNDO" in q or "COPA DO MUNDO" in q or "COPA MUNDO" in q) and "MUNDIAL CLUBES" not in q:
+        if brasil:
+            return SELECAO_F if fem else SELECAO
+        return COPA if not fem else OUTROS
     if "CAMP BRASILEIRO" in q and not any(s in q for s in ("SERIE B", "SERIE C", "SERIE D", "FEM", "SUB")):
         return SERIE_A
-    return None
+    return OUTROS
 
 
 def _hora(v):
@@ -97,7 +107,7 @@ def _metrica_da_aba(nome):
 def _cabecalho(df):
     for i in range(min(len(df), 20)):
         vals = [str(x).strip() for x in df.iloc[i].tolist()]
-        if "Detalhe" in vals and "Emissora Transmissora" in vals:
+        if "Detalhe" in vals and ("Emissora Transmissora" in vals or "Emissora" in vals):
             return i, vals
     return None, None
 
@@ -109,19 +119,22 @@ def _linhas_da_aba(df, metrica, origem):
     d = df.iloc[i + 1:].copy()
     d.columns = [c if c and c != "nan" else f"_c{k}" for k, c in enumerate(cab)]
     col_data = next((c for c in ("Data Inicio", "Data", "Data Início") if c in d.columns), None)
+    col_tr = "Emissora Transmissora" if "Emissora Transmissora" in d.columns else "Emissora"
     out, fora = [], {}
     for _, r in d.iterrows():
         data = _data(r.get(col_data)) if col_data else None
         partida = str(r.get("Detalhe") or "").strip()
-        if data is None or not partida or partida == "nan":
-            continue
         quadro = str(r.get("Quadro") or "").strip()
-        comp = classifica(quadro, partida)
+        if partida in ("", "nan", "None"):             # pré-jogo, pós-jogo e cerimônias vêm sem "Detalhe"
+            partida = quadro.title() if quadro and quadro != "nan" else ""
+        if data is None or not partida:
+            continue
+        comp = classifica(quadro, partida, r.get("Nome") or "")
         if comp is None:
             fora.setdefault(quadro, set()).add((data, partida))
             continue
         met = metrica or ("Share" if _sa(r.get("Métrica", "")).startswith("SH") else "Audiência")
-        trans = TRANSMISSORAS.get(_sa(r.get("Emissora Transmissora")), str(r.get("Emissora Transmissora")).strip().title())
+        trans = TRANSMISSORAS.get(_sa(r.get(col_tr)), str(r.get(col_tr)).strip().title())
         base = {"data": data, "hora_inicio": _hora(r.get("Hora Início") or r.get("Hora Inicio")),
                 "hora_fim": _hora(r.get("Hora Fim")), "dia_semana": str(r.get("Dia da Semana") or "").strip() or DIAS[data.weekday()],
                 "nome": str(r.get("Nome") or "").strip(), "partida": partida, "quadro": quadro, "competicao": comp,
@@ -167,8 +180,7 @@ def ler_planilha(arquivo, nome=None):
     out = pd.DataFrame(linhas, columns=COLUNAS)
     if fora:
         tot = len(set().union(*fora.values()))
-        avisos.append(f"{tot} jogo(s) de outros campeonatos ficaram de fora (o painel mostra Série A e Seleção): "
-                      + ", ".join(f"{k.title()} ({len(v)})" for k, v in sorted(fora.items(), key=lambda x: -len(x[1]))[:4]) + ".")
+        avisos.append(f"{tot} linha(s) sem quadro reconhecido ficaram de fora.")
     if not out.empty:
         out = out.drop_duplicates(CHAVE, keep="last").reset_index(drop=True)
         if set(out["metrica"]) == {"Audiência"}:
@@ -179,7 +191,7 @@ def ler_planilha(arquivo, nome=None):
 def mesclar(atual, novo):
     """(base mesclada, jogos novos, jogos alterados). A chave é jogo (data+hora+partida) × métrica × emissora."""
     atual = atual.reindex(columns=COLUNAS) if atual is not None else pd.DataFrame(columns=COLUNAS)
-    jogo = ["data", "hora_inicio", "partida"]
+    jogo = JOGO
     if atual.empty:
         return novo.reindex(columns=COLUNAS).reset_index(drop=True), novo[jogo].drop_duplicates().shape[0], 0
     a = atual.set_index(CHAVE)
@@ -202,8 +214,8 @@ def jogos(df, metrica):
     d = df[df["metrica"] == metrica]
     if d.empty:
         return pd.DataFrame()
-    chave = ["data", "hora_inicio", "partida"]
-    info = d.drop_duplicates(chave)[chave + ["hora_fim", "dia_semana", "nome", "quadro", "competicao", "transmissora"]]
+    chave = JOGO
+    info = d.drop_duplicates(chave)[chave + ["hora_fim", "dia_semana", "nome", "quadro", "competicao"]]
     larga = d.pivot_table(index=chave, columns="emissora", values="valor", aggfunc="last").reset_index()
     j = info.merge(larga, on=chave, how="left")
     j["valor"] = [r[r["transmissora"]] if r["transmissora"] in j.columns else np.nan for _, r in j.iterrows()]
@@ -244,8 +256,10 @@ def modelo_xlsx():
               "Aba \"Audiência\" = F_Audiência (Rat%) · aba \"Share\" = F_Share (Shr%). Uma linha por transmissão.",
               "Colunas iguais às do BI. \"Reference:\" = valor da emissora que transmitiu; GLOBO, RECORD, SBT, TV BAND, OCP… = o que cada",
               "   emissora marcou no mesmo horário. A TVE Bahia não tem coluna: o valor dela é o \"Reference:\" quando ela transmite.",
-              "O painel usa os quadros do Brasileirão Série A (FUT CAMP BRASILEIRO VIVO) e da Seleção Brasileira (eliminatórias,",
-              "   amistosos e Copa do Mundo; a feminina aparece separada). Os outros campeonatos são contados e ignorados.",
+              "Também serve a exportação do Instar Analytics (\"Competição de Faixas Horárias\": aba Rat% e aba Shr%), como vem.",
+              "Todos os quadros entram. A aba abre no Brasileirão Série A (FUT CAMP BRASILEIRO VIVO) e na Seleção Brasileira",
+              "   (amistosos, eliminatórias e Copa do Mundo com o Brasil); os outros campeonatos, a Copa sem o Brasil e o",
+              "   pré/pós-jogo ficam disponíveis no filtro de competição.",
               "Data: AAAA-MM-DD ou DD/MM/AAAA. Hora: HH:MM. Decimais com vírgula ou ponto. Pode colar a exportação inteira do BI.",
               "",
               "Enviar: no painel de TV, ⚙ Atualizar dados → 8 · Futebol. Jogos já existentes (data+hora+partida) são substituídos.",
@@ -324,14 +338,45 @@ def gera_demo(seed=20261112, ate="2026-10-31"):
     copa = [("2026-06-13", "NIGERIA"), ("2026-06-19", "SUECIA"), ("2026-06-24", "AUSTRALIA"),
             ("2026-06-29", "GANA"), ("2026-07-04", "DINAMARCA"), ("2026-07-09", "PORTUGAL")]
     for k, (dt, adv) in enumerate(copa):                         # jogos e adversários inventados (dados fictícios)
-        add(pd.Timestamp(dt), ["19:00", "22:00", "18:00", "17:00", "16:00", "17:00"][k], f"BRASIL X {adv}",
-            "FUT COPA DO MUNDO VIVO", "GLOBO", ("C", k, 0))
+        hora = ["19:00", "22:00", "18:00", "17:00", "16:00", "17:00"][k]
+        add(pd.Timestamp(dt), hora, f"BRASIL X {adv}", "FUT COPA DO MUNDO VIVO", "GLOBO+SBT", ("C", k, 0))
+        h0 = int(hora[:2]) - 1
+        add(pd.Timestamp(dt), f"{h0:02d}:30", "PRE JOGO", "PRE JOGO", "GLOBO", ("P", 1, 0))
     for k, dt in enumerate(["2024-04-06", "2024-06-01", "2025-04-04", "2025-10-24", "2026-04-11", "2026-10-24"]):
         add(pd.Timestamp(dt), "11:00" if k % 2 else "17:00", f"BRASIL X {_AMISTOSOS[(k + 3) % len(_AMISTOSOS)]}",
             "FUT AMIST SEL BRASIL FEM VIVO", "GLOBO", ("F", 0, 0))
 
+    # Copa do Mundo de 2026 sem o Brasil (Globo ou SBT)
+    outras = ["ARGENTINA X MEXICO", "FRANCA X JAPAO", "ESPANHA X CROACIA", "INGLATERRA X EUA", "ALEMANHA X COREIA SUL",
+              "PORTUGAL X URUGUAI", "HOLANDA X SENEGAL", "ITALIA X EQUADOR", "BELGICA X MARROCOS", "COLOMBIA X SUICA"]
+    for k, p_ in enumerate(outras):
+        add(pd.Timestamp("2026-06-12") + pd.Timedelta(days=2 * k + 1), ["13:00", "16:00", "22:00"][k % 3], p_,
+            "FUT COPA DO MUNDO VIVO", "GLOBO" if k % 2 == 0 else "SBT", ("M", k % 3, 0))
+    # Copa do Brasil (Globo), Baiano (TVE e Band, às vezes juntas) e Série B (Band e TVE ao mesmo tempo)
+    for ano in (2023, 2024, 2025, 2026):
+        for k in range(6):
+            dt = pd.Timestamp(f"{ano}-04-19") + pd.Timedelta(days=21 * k)
+            loc = ["BAHIA", "VITORIA BA"][k % 2]
+            add(dt, "21:30", f"{loc} X {_CLUBES[(k * 3 + ano) % len(_CLUBES)]}", "FUT COPA DO BRASIL VIVO", "GLOBO", ("O", 1, ano))
+        for k in range(8):
+            dt = pd.Timestamp(f"{ano}-01-20") + pd.Timedelta(days=7 * k)
+            adv = ["JACUIPENSE", "ATLETICO BA", "BAHIA DE FEIRA", "JUAZEIRENSE", "BARCELONA BA", "VITORIA DA CONQUISTA",
+                   "JEQUIE", "FLUMINENSE FEIRA"][k]
+            add(dt, "16:00", f"{['BAHIA', 'VITORIA BA'][k % 2]} X {adv}", "FUT CAMP BAIANO VIVO",
+                "TVE BAHIA+TV BAND" if k % 3 == 0 else "TVE BAHIA", ("O", 2, ano))
+        for k in range(5):
+            dt = pd.Timestamp(f"{ano}-05-04") + pd.Timedelta(days=14 * k)
+            add(dt, "16:00", f"{_CLUBES[(k + ano) % len(_CLUBES)]} X {_CLUBES[(k + ano + 5) % len(_CLUBES)]}",
+                "FUT CAMP BRAS SERIE B VIVO", "TV BAND+TVE BAHIA", ("O", 3, ano))
+    # pré-jogo de alguns clássicos da Série A
+    for data, hora, partida, quadro, trans, info, _x in list(jogos_):
+        if quadro == "FUT CAMP BRASILEIRO VIVO" and trans == "GLOBO" and info[1] == 3:
+            add(data, f"{int(hora[:2]) - 1:02d}:30", "PRE JOGO", "PRE JOGO", "GLOBO", ("P", 2, info[2]))
+
     linhas = []
     for data, hora, partida, quadro, trans, (tipo_c, peso, ano), _extra in jogos_:
+        transmissoras = trans.split("+")                        # "GLOBO+SBT": a mesma partida em duas emissoras
+        trans = transmissoras[0]
         h = int(hora[:2])
         noite = h >= 20
         tle = (46 if not noite else 43) + rng.normal(0, 1.6) + (4 if tipo_c in "SC" else 0) + (6 if tipo_c == "C" else 0)
@@ -341,30 +386,46 @@ def gera_demo(seed=20261112, ate="2026-10-31"):
             ref = (16 if peso == 0 else 22) + rng.normal(0, 2.2)
         elif tipo_c == "C":
             ref = 31 + 2.2 * peso + rng.normal(0, 1.5)
+        elif tipo_c == "M":                                     # Copa sem o Brasil
+            ref = (14 + 2 * peso + rng.normal(0, 2)) * (.35 if trans == "SBT" else 1)
+        elif tipo_c == "O":                                     # Copa do Brasil, Baiano, Série B
+            ref = {1: 16 + rng.normal(0, 2.5), 2: 2.6 + rng.normal(0, .7), 3: 1.2 + rng.normal(0, .3)}[peso]
+        elif tipo_c == "P":                                     # pré-jogo
+            ref = 10 + 4 * (peso == 1) + rng.normal(0, 1.2)
         else:
             ref = 9 + rng.normal(0, 1.5)
         ref = float(np.clip(ref, 3, tle * .85))
         resto = tle - ref
-        pesos = {"GLOBO": .44, "RECORD": .16, "SBT": .12, "TV BAND": .08, "OCP": .12, "Conteúdo de TV/Vídeo sem referência": .08}
-        pesos.pop(trans, None)
+        pesos = {"GLOBO": .44, "RECORD": .16, "SBT": .12, "TV BAND": .08, "TVE BAHIA": .02, "OCP": .12,
+                 "Conteúdo de TV/Vídeo sem referência": .08}
+        refs = {trans: ref}
+        for t2 in transmissoras[1:]:                            # a 2ª emissora do jogo simultâneo
+            refs[t2] = {"SBT": 7.5 + rng.normal(0, 1.8), "TV BAND": ref * 1.6, "TVE BAHIA": ref * .55}.get(t2, ref * .4)
+        resto = tle - sum(refs.values())
+        for t2 in refs:
+            pesos.pop(t2, None)
         if trans != "GLOBO":
             pesos["GLOBO"] = .48                                       # a Globo segue forte com outra programação
         w = np.array(list(pesos.values())) * np.exp(rng.normal(0, .18, len(pesos)))
-        vals = dict(zip(pesos, resto * w / w.sum()))
-        vals[trans] = ref
-        cols_a = {c: round(vals.get(c, np.nan), 2) for c in ("GLOBO", "RECORD", "SBT", "TV BAND", "OCP",
+        vals = dict(zip(pesos, max(resto, 1) * w / w.sum()))
+        vals.update(refs)
+        cols_a = {c: round(vals.get(c, np.nan), 2) for c in ("GLOBO", "RECORD", "SBT", "TV BAND", "TVE BAHIA", "OCP",
                                                              "Conteúdo de TV/Vídeo sem referência")}
         cols_a["Total Ligados Especial"] = round(tle, 2)
         fim_h = f"{(h + 2) % 24:02d}:{hora[3:]}"
         nome_faixa = "FUTEBOL NOT" if noite else ("FUTEBOL MAT" if h < 12 else "FUTEBOL VES")
-        base = {"data": data, "hora_inicio": hora, "hora_fim": fim_h, "dia_semana": DIAS[data.weekday()], "nome": nome_faixa,
-                "partida": partida, "quadro": quadro, "competicao": classifica(quadro, partida),
-                "transmissora": TRANSMISSORAS[trans], "origem": "demo"}
-        for col, v in cols_a.items():
-            em = COLUNAS_BI[col]
-            linhas.append({**base, "metrica": "Audiência", "emissora": em, "valor": v})
-            if em != "TLE (total ligados)":
-                linhas.append({**base, "metrica": "Share", "emissora": em, "valor": round(v / tle * 100, 2)})
+        if tipo_c == "P":
+            fim_h, nome_faixa = f"{h + 1:02d}:00", "FUTEBOL PRE JOGO"
+            partida = "Pre Jogo"
+        for t_ in transmissoras:
+            base = {"data": data, "hora_inicio": hora, "hora_fim": fim_h, "dia_semana": DIAS[data.weekday()], "nome": nome_faixa,
+                    "partida": partida, "quadro": quadro, "competicao": classifica(quadro, partida, nome_faixa),
+                    "transmissora": TRANSMISSORAS[t_], "origem": "demo"}
+            for col, v in cols_a.items():
+                em = COLUNAS_BI[col]
+                linhas.append({**base, "metrica": "Audiência", "emissora": em, "valor": v})
+                if em != "TLE (total ligados)":
+                    linhas.append({**base, "metrica": "Share", "emissora": em, "valor": round(v / tle * 100, 2)})
     return pd.DataFrame(linhas).reindex(columns=COLUNAS)
 
 
@@ -386,4 +447,36 @@ def para_planilha_bi(df):
                 out[col] = j[em] if em in j.columns else (100.0 if met == "Share" and em == "TLE (total ligados)" else np.nan)
             out["Data Fim"] = out["Data Inicio"]
             out.to_excel(w, sheet_name=met, index=False)
+    return buf.getvalue()
+
+
+def para_instar_analytics(df):
+    """Formato interno -> planilha no layout do Instar Analytics ("Competição de Faixas Horárias": título, cabeçalho, linha
+    Total, uma aba de Rat% e outra de Shr%), em bytes .xlsx. Serve para gerar arquivos de teste no mesmo formato da exportação."""
+    import openpyxl
+    inv_t = {v: k for k, v in TRANSMISSORAS.items()}
+    cols_em = ["GLOBO", "RECORD", "SBT", "TV BAND", "TVE BAHIA", "OCP", "Conteúdo de TV/Vídeo sem referência", "Total Ligados Especial"]
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+    for met, aba, tit in (("Audiência", "etição de Faixas Horárias(Rat%)",
+                           "Competição de Faixas Horárias (Rat%|Total Domicílios|Grande Salvador|Live)"),
+                          ("Share", "(Shr%  Total Ligados Especial )",
+                           "Competição de Faixas Horárias (Shr% [Total Ligados Especial]|Total Domicílios|Grande Salvador|Live)")):
+        j = jogos(df, met)
+        if j.empty:
+            continue
+        ws = wb.create_sheet(aba)
+        ws.append([tit])
+        ws.append(["Data", "Hora Início", "Duração", "Hora Fim", "Nome", "Emissora", "Dia da Semana", "Detalhe", "Quadro"] + cols_em)
+        ws.append(["Total"] + [None] * 8 + [None] * len(cols_em))
+        for _, r in j.iterrows():
+            vals = [r.get(COLUNAS_BI[c]) if c in COLUNAS_BI else None for c in cols_em]
+            if met == "Share":
+                vals[-1] = 100
+            pre = r["competicao"] == PRE_POS and str(r["partida"]).upper() == str(r["quadro"]).title().upper()
+            ws.append([pd.Timestamp(r["data"]).strftime("%d/%m/%Y"), f"{r['hora_inicio']}:00", "01:55:00", f"{r['hora_fim'] or ''}:00",
+                       r["nome"], inv_t.get(r["transmissora"], r["transmissora"]), r["dia_semana"],
+                       None if pre else r["partida"], r["quadro"]] + [None if v is None or pd.isna(v) else float(v) for v in vals])
+    buf = io.BytesIO()
+    wb.save(buf)
     return buf.getvalue()
