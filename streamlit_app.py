@@ -26,6 +26,7 @@ import diario  # noqa: E402
 from streamlit.errors import StreamlitAPIException  # noqa: E402
 import concorrencia  # noqa: E402  (concorrência: planilha, leitura e dados fictícios)
 import futebol  # noqa: E402  (futebol: Série A e Seleção, no formato do BI de partidas)
+import identidade_times  # noqa: E402  (bandeiras das seleções e cores dos clubes)
 import chat  # noqa: E402  (assistente do painel: fase 1, respostas prontas)
 import banco  # noqa: E402  (banco de dados da empresa, opcional: sem conexão configurada, lê os arquivos de dados/)
 
@@ -2766,13 +2767,11 @@ def _media_por(J, chave, emissoras):
     return out
 
 
-_PALETA_TIMES = ["#1f4e9c", "#c0392b", "#0f7a4d", "#7b3fa0", "#b8860b", "#00838f", "#ad1457", "#455a64", "#e65100", "#2e7d32"]
 
 
 def _time_fmt(t):
-    """'VITORIA BA' -> 'Vitoria BA' · 'BRASIL' -> 'Brasil' (sigla de estado continua maiúscula)."""
-    p = str(t).strip().split()
-    return " ".join(w.upper() if (len(w) == 2 and k == len(p) - 1 and len(p) > 1) else w.capitalize() for k, w in enumerate(p))
+    """Nome do time ou seleção para exibir (com acentos; "2T" vira "(2º tempo)")."""
+    return identidade_times.nome(t)
 
 
 def _times(partida):
@@ -2781,14 +2780,21 @@ def _times(partida):
 
 
 def _selo(time, tam=34):
-    """Selo redondo com as iniciais do time (no lugar do escudo, que é marca do clube)."""
-    w = [x for x in str(time).split() if x not in ("FC", "EC", "SC")]
-    if not w:
-        return ""
-    ini = w[0][:3] if (len(w) == 1 or (len(w) == 2 and len(w[1]) == 2)) else (w[0][0] + w[1][0])
-    cor = _PALETA_TIMES[sum(map(ord, w[0])) % len(_PALETA_TIMES)]
-    return (f'<span class="fu-selo" style="--sc:{cor}; width:{tam}px; height:{tam}px; font-size:{tam * .34:.0f}px" '
-            f'title="{html_esc(_time_fmt(time))}">{html_esc(ini)}</span>')
+    """Bandeira da seleção ou selo com as cores e listras do uniforme do clube, com a sigla em branco."""
+    return identidade_times.selo(time, tam)
+
+
+def _partida_txt(partida):
+    """'BAHIA X VITORIA BA' -> 'Bahia × Vitória' (pré-jogo e afins ficam como vieram)."""
+    a, b = _times(partida)
+    return f"{_time_fmt(a)} × {_time_fmt(b)}" if b else str(partida)
+
+
+def _partida_selos(partida, tam=20):
+    a, b = _times(partida)
+    if not b:
+        return html_esc(str(partida))
+    return (f'{_selo(a, tam)}{html_esc(_time_fmt(a))} <span style="opacity:.5">×</span> {_selo(b, tam)}{html_esc(_time_fmt(b))}')
 
 
 def _chip_em(e):
@@ -2825,9 +2831,9 @@ def _css_futebol():
     text-shadow:0 0 14px rgba(255,255,255,.25);}}
 .fu-hero .ps {{font-size:.72rem; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}}
 @media (max-width:900px) {{ .fu-hero .placar {{grid-template-columns:repeat(2, minmax(0, 1fr));}} }}
-.fu-selo {{display:inline-grid; place-items:center; border-radius:50%; flex:none; color:#fff; font-weight:800; letter-spacing:.02em;
-    background:radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--sc) 70%, #fff), var(--sc) 70%);
-    box-shadow:0 0 0 2px {CARTAO}, 0 0 0 3px color-mix(in srgb, var(--sc) 60%, transparent);}}
+.fu-selo {{flex:none; border-radius:50%; vertical-align:middle; box-shadow:0 0 0 2px {CARTAO}, 0 2px 6px rgba(0,0,0,.25);
+    transition:transform .2s;}}
+.fu-selo:hover {{transform:scale(1.12);}}
 .fu-chip {{display:inline-flex; align-items:center; gap:5px; padding:1px 8px 1px 6px; border-radius:999px; font-size:.72rem; font-weight:600;
     white-space:nowrap; color:{TINTA}; background:color-mix(in srgb, var(--ec) 14%, transparent); border:1px solid color-mix(in srgb, var(--ec) 40%, transparent);}}
 .fu-chip::before {{content:""; width:7px; height:7px; border-radius:50%; background:var(--ec);}}
@@ -2890,8 +2896,7 @@ def _tabela_classificacao(J, met, emis_cols, limite=400):
     linhas = []
     for k, (_, r) in enumerate(T.iterrows(), 1):
         a, b = _times(r["partida"])
-        pj = (f'<span class="pj">{_selo(a, 20)}{html_esc(_time_fmt(a))} <span style="opacity:.5">×</span> {_selo(b, 20)}{html_esc(_time_fmt(b))}</span>'
-              if b else html_esc(str(r["partida"])))
+        pj = f'<span class="pj">{_partida_selos(r["partida"], 22)}</span>' if b else html_esc(str(r["partida"]))
         cor = COR_FUT.get(r["transmissora"], CINZA)
         cels = "".join(f"<td class='n' style='{'font-weight:700; color:' + COR_FUT.get(e, TINTA) if e == r['transmissora'] else 'color:' + TINTA2}'>"
                        f"{br(r[e]) if e in r and pd.notna(r[e]) else '–'}</td>" for e in mostrar)
@@ -2928,7 +2933,7 @@ def _ficha_time(busca, J, Jcomp, met):
            f'<div><b>{br(casa["valor"].mean()) if len(casa) else "–"}</b><span>como mandante ({len(casa)})</span></div>'
            f'<div><b>{br(fora["valor"].mean()) if len(fora) else "–"}</b><span>como visitante ({len(fora)})</span></div>')
     st.markdown(f'<div class="fu-ficha">{_selo(nome, 64)}<div><div class="nm">{html_esc(_time_fmt(nome))}</div>'
-                f'<div class="sub">melhor jogo: <b>{html_esc(str(melhor["partida"]))}</b> · {br(melhor["valor"])}{suf} em '
+                f'<div class="sub">melhor jogo: <b>{html_esc(_partida_txt(melhor["partida"]))}</b> · {br(melhor["valor"])}{suf} em '
                 f'{_dmy(melhor["data"])} ({html_esc(melhor["transmissora"])})</div><div class="num">{num}</div></div></div>',
                 unsafe_allow_html=True)
     if alvo in ("BAHIA", "VITORIA", "VITORIA BA", "BAVI", "BA VI"):
@@ -2937,7 +2942,7 @@ def _ficha_time(busca, J, Jcomp, met):
             top = bv.loc[bv["valor"].idxmax()]
             st.markdown(f'<div class="fu-ficha fu-bavi"><div style="display:flex; gap:4px">{_selo("BAHIA", 40)}{_selo("VITORIA BA", 40)}</div>'
                         f'<div><div class="nm">Ba-Vi</div><div class="sub">{len(bv)} clássicos no filtro · média <b>{br(bv["valor"].mean())}{suf}</b> '
-                        f'({sinal(bv["valor"].mean() - comp_m)} {un} vs a média) · maior: <b>{html_esc(str(top["partida"]))}</b>, '
+                        f'({sinal(bv["valor"].mean() - comp_m)} {un} vs a média) · maior: <b>{html_esc(_partida_txt(top["partida"]))}</b>, '
                         f'{br(top["valor"])}{suf} em {_dmy(top["data"])}</div></div></div>', unsafe_allow_html=True)
 
 
@@ -3043,10 +3048,11 @@ def pagina_futebol():
         seg = J.drop(index=top.name).nlargest(4, "valor")
         st.markdown('<div class="vs" style="margin:12px 0 6px"><b>NA SEQUÊNCIA</b></div>' + "".join(
             f'<div style="display:flex; align-items:center; gap:8px; padding:6px 2px; border-bottom:1px solid {LINHA}; font-size:.8rem">'
-            f'{_medalha(k)}<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">'
-            f'{html_esc(str(r["partida"]))}</span><b>{br(r["valor"])}{suf}</b></div>' for k, (_, r) in enumerate(seg.iterrows(), 2)),
+            f'{_medalha(k)}<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; '
+            f'align-items:center; gap:5px">{_partida_selos(r["partida"], 18)}</span><b>{br(r["valor"])}{suf}</b></div>'
+            for k, (_, r) in enumerate(seg.iterrows(), 2)),
             unsafe_allow_html=True)
-    frases = [f"A transmissão de maior {met.lower()} foi <b>{html_esc(top['partida'])}</b>, em {_dmy(top['data'])}, com "
+    frases = [f"A transmissão de maior {met.lower()} foi <b>{html_esc(_partida_txt(top['partida']))}</b>, em {_dmy(top['data'])}, com "
               f"<b>{br(top['valor'])}{suf}</b> na {html_esc(top['transmissora'])}."]
     if len(por_trans) > 1:
         dif = por_trans["mean"].sort_values(ascending=False)
@@ -3075,7 +3081,7 @@ def pagina_futebol():
             fig.add_scatter(x=x["data"], y=x["valor"], mode="markers", name=e,
                             marker=dict(size=6 + 18 * np.sqrt(x["valor"].clip(lower=0) / vmax), color=COR_FUT.get(e, CINZA),
                                         opacity=.78, line=dict(width=1, color=CARTAO)),
-                            customdata=np.stack([x["partida"], x["hora_inicio"], x["competicao"].map(lambda c: CURTO_COMP.get(c, c))], axis=-1),
+                            customdata=np.stack([x["partida"].map(_partida_txt), x["hora_inicio"], x["competicao"].map(lambda c: CURTO_COMP.get(c, c))], axis=-1),
                             hovertemplate="<b>%{customdata[0]}</b><br>%{x|%d/%m/%Y} · %{customdata[1]} · %{customdata[2]}<br>"
                                           f"{e}: %{{y:.2f}}{suf}<extra></extra>")
         picos = []                                              # até 3 picos, afastados no tempo (sem rótulos encavalados)
@@ -3703,7 +3709,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "24/11/2026 · Labs · PIPECO sobre futebol, abas protegidas contra erros"
+VERSAO_PAINEL = "25/11/2026 · Labs · bandeiras e cores dos times no futebol, PIPECO sobre futebol"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
