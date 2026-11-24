@@ -10,12 +10,13 @@ import html
 import re
 import unicodedata
 
+import numpy as np
 import pandas as pd
 
 FAIXA, FAIXA_7 = "6h às 24h", "7h às 24h"
 MESES = "jan fev mar abr mai jun jul ago set out nov dez".split()
 
-SUGESTOES = ["Como foi o último mês?", "Concorrência no último mês", "Quais programas mais cresceram?", "Chance de bater a meta",
+SUGESTOES = ["Como foi o último mês?", "Jogos de futebol com maior audiência", "Concorrência no último mês", "Quais programas mais cresceram?", "Chance de bater a meta",
              "Maior audiência", "O que é rating e share?", "Como a projeção é feita?"]
 
 BOAS_VINDAS = ("Olá! Sou o **PIPECO**, o assistente do painel. Pergunte sobre a **audiência** e o **share** da TV Bahia, "
@@ -254,7 +255,32 @@ def r_concorrencia(conc, rec=FAIXA, met="Share"):
     return txt
 
 
-def responder(texto, base, rodada=None, conc=None):
+def r_futebol(fut, t, met):
+    if fut is None or len(fut) == 0:
+        return "O painel ainda não tem dados de futebol. Eles são enviados em ⚙ Atualizar dados → Futebol."
+    f = Fonte(pd.DataFrame(columns=["programa", "metrica", "mes", "valor"]), fut=fut)
+    J = f.jogos(met)
+    time = "Ba-Vi" if re.search(r"\bba ?vi\b|\bclassico\b", t) else None
+    for p in ([] if time else J["partida"]):
+        for lado in re.split(r"\s+X\s+", str(p).upper()):
+            n = norm(lado)
+            if len(n) >= 4 and re.search(rf"(?<![a-z]){re.escape(n.split()[0])}(?![a-z])", t):
+                time = lado.strip().split()[0]
+                break
+        if time:
+            break
+    suf = "%" if met == "Share" else ""
+    r = f_fut_jogos(f, met, time=time, limite=5)
+    if r.get("erro"):
+        return r["erro"].capitalize() + "."
+    alvo = ("dos **Ba-Vis**" if time == "Ba-Vi" else f"dos jogos do **{time.title()}**") if time else "dos jogos da Série A e da Seleção"
+    txt = (f"**Futebol** · {met.lower()} {alvo}: {r['transmissoes']} transmissões, média **{br(r['media'])}{suf}**.\n"
+           + "\n".join(f"• {l['partida'].title()} ({_mes_rot(l['data'][:7])}, {l['transmissora']}): **{br(l['valor'])}{suf}**"
+                       for l in r["linhas"]))
+    return txt
+
+
+def responder(texto, base, rodada=None, conc=None, fut=None):
     """Pergunta em texto livre -> resposta em markdown simples (negrito, itálico, itens '• ')."""
     t = norm(texto)
     if not t:
@@ -266,6 +292,8 @@ def responder(texto, base, rodada=None, conc=None):
         return CONCEITOS
     if re.search(r"\b(como|metodo|metodologia)\b.*\b(projec|calcul|model|feita|funciona)", t) or "metodologia" in t:
         return PROJECAO
+    if re.search(r"\b(futebol|jogos?|partidas?|serie a|brasileirao|selecao|copa|campeonato|classico|ba vi|bavi)\b", t):
+        return r_futebol(fut, t, "Share" if met == "Share" else "Audiência")
     eh_conc = re.search(r"\b(concorr\w*|emissoras?|vantagem|vice|segunda colocada|lideranca|outras emissoras)\b", t)
     if not eh_conc and conc is not None and len(conc):
         eh_conc = any(norm(e) in t for e in set(conc["emissora"]) if norm(e) not in ("tv bahia globo",))
@@ -311,7 +339,7 @@ HISTORICO = 8                      # mensagens anteriores enviadas como contexto
 class Fonte:
     """Os dados que as ferramentas consultam: base mensal, rodada mensal dos programas e rodadas diárias das faixas."""
 
-    def __init__(self, base, rodada=None, diarias=None, demo=False, conc=None):
+    def __init__(self, base, rodada=None, diarias=None, demo=False, conc=None, fut=None):
         self.base = base.copy()
         self.base["mes"] = pd.to_datetime(self.base["mes"])
         self.rodada = rodada
@@ -320,6 +348,18 @@ class Fonte:
         c = conc.copy() if conc is not None else pd.DataFrame(columns=["mes", "recorte", "emissora", "rat", "shr"])
         c["mes"] = pd.to_datetime(c["mes"])
         self.conc = c                          # concorrência: mês × recorte × emissora (rat, shr)
+        self.fut = fut if fut is not None else pd.DataFrame()   # futebol: formato longo de futebol.py
+        self._jogos = {}
+
+    def jogos(self, metrica):
+        """Uma linha por transmissão (cache por métrica), como na aba Futebol."""
+        if metrica not in self._jogos:
+            import futebol
+            j = futebol.jogos(self.fut, metrica) if len(self.fut) else pd.DataFrame()
+            if len(j):
+                j["data"] = pd.to_datetime(j["data"])
+            self._jogos[metrica] = j
+        return self._jogos[metrica]
 
     def series(self):
         return list(self.base["programa"].drop_duplicates())
@@ -592,9 +632,158 @@ def f_conc_vantagem(fonte, recorte=None, metrica="Share", mes=None, inicio=None,
 
 
 _SERIES_TXT = "Nome da faixa ou do programa, como aparece no catálogo (ex.: 'BATV', '6h às 24h')."
+_COMP_APELIDOS = {"serie a": "Brasileirão Série A", "brasileirao": "Brasileirão Série A", "brasileiro": "Brasileirão Série A",
+                  "selecao": "Seleção Brasileira", "selecao brasileira": "Seleção Brasileira",
+                  "selecao feminina": "Seleção Brasileira (feminina)", "feminina": "Seleção Brasileira (feminina)",
+                  "copa": "Copa do Mundo (outras seleções)", "copa do mundo": "Copa do Mundo (outras seleções)",
+                  "outros": "Outros campeonatos", "outros campeonatos": "Outros campeonatos",
+                  "pre jogo": "Pré-jogo, pós-jogo e VT", "pos jogo": "Pré-jogo, pós-jogo e VT"}
+_TRANS_APELIDOS = {"globo": "TV Bahia (Globo)", "tv bahia": "TV Bahia (Globo)", "record": "Record", "sbt": "SBT",
+                   "band": "Band", "tv band": "Band", "tve": "TVE Bahia", "tve bahia": "TVE Bahia"}
+
+
+def _eh_bavi(t):
+    return norm(t).replace(" ", "") in ("bavi", "baxvi", "bahiaxvitoria", "bahiavitoria", "classico", "classicobavi")
+
+
+def _lista(x):
+    return [] if not x else ([x] if isinstance(x, str) else list(x))
+
+
+def _filtra_fut(fonte, metrica="Audiência", time=None, competicoes=None, transmissora=None, inicio=None, fim=None,
+                padrao_principais=True):
+    J = fonte.jogos(metrica if metrica in ("Audiência", "Share") else "Audiência")
+    if J.empty:
+        return J, {}
+    import futebol
+    comps = [_COMP_APELIDOS.get(norm(c), c) for c in _lista(competicoes)]
+    comps = [c for c in comps if c in futebol.COMPETICOES]
+    if not comps and padrao_principais and not time:
+        comps = list(futebol.PRINCIPAIS)
+    elif not comps:
+        comps = [c for c in futebol.COMPETICOES if c != futebol.PRE_POS]
+    x = J[J["competicao"].isin(comps)]
+    trans = [_TRANS_APELIDOS.get(norm(t), t) for t in _lista(transmissora)]
+    if trans:
+        x = x[x["transmissora"].isin(trans)]
+    ini, fim_ = _periodo(inicio, None), _periodo(fim, None)
+    if ini is not None:
+        x = x[x["data"] >= ini]
+    if fim_ is not None:
+        x = x[x["data"] < fim_ + pd.DateOffset(months=1)]
+    if time and _eh_bavi(time):                               # o clássico: Bahia e Vitória na mesma partida
+        x = x[x["partida"].map(lambda p: "BAHIA" in futebol._sa(p) and "VITORIA" in futebol._sa(p))]
+    elif time:
+        alvo = futebol._sa(time)
+        x = x[x["partida"].map(lambda p: alvo in futebol._sa(p))]
+    filtros = {"competicoes": comps, "transmissoras": trans or "todas", "time": time or "todos",
+               "periodo": f"{x['data'].min():%Y-%m} a {x['data'].max():%Y-%m}" if len(x) else "sem jogos"}
+    return x, filtros
+
+
+def _jogo_dict(r):
+    return {"data": f"{r['data']:%Y-%m-%d}", "dia": r["dia_semana"], "hora": r["hora_inicio"], "partida": r["partida"],
+            "competicao": r["competicao"], "quadro": r["quadro"], "transmissora": r["transmissora"], "valor": _r(r["valor"])}
+
+
+def f_fut_jogos(fonte, metrica="Audiência", time=None, competicoes=None, transmissora=None, inicio=None, fim=None,
+                ordem="desc", limite=10):
+    J, filtros = _filtra_fut(fonte, metrica, time, competicoes, transmissora, inicio, fim)
+    if fonte.fut is None or len(fonte.fut) == 0:
+        return {"erro": "o painel não tem dados de futebol carregados"}
+    if J.empty:
+        return {"filtros": filtros, "erro": "nenhuma transmissão com esses filtros"}
+    T = J.sort_values("valor", ascending=(ordem == "asc")).head(max(1, min(int(limite or 10), 30)))
+    return {"metrica": metrica, "filtros": filtros, "transmissoes": len(J), "media": _r(J["valor"].mean()),
+            "linhas": [_jogo_dict(r) for _, r in T.iterrows()]}
+
+
+def f_fut_resumo(fonte, agrupar_por="ano", metrica="Audiência", time=None, competicoes=None, transmissora=None,
+                 inicio=None, fim=None):
+    if fonte.fut is None or len(fonte.fut) == 0:
+        return {"erro": "o painel não tem dados de futebol carregados"}
+    J, filtros = _filtra_fut(fonte, metrica, time, competicoes, transmissora, inicio, fim)
+    if J.empty:
+        return {"filtros": filtros, "erro": "nenhuma transmissão com esses filtros"}
+    import futebol
+    if agrupar_por == "time":
+        linhas = []
+        for lado, idx in (("mandante", 0), ("visitante", 1)):
+            for _, r in J.iterrows():
+                p = re.split(r"\s+X\s+", str(r["partida"]).upper())
+                if len(p) == 2:
+                    linhas.append((p[idx].strip(), lado, r["valor"]))
+        T = pd.DataFrame(linhas, columns=["time", "lado", "valor"])
+        g = T.groupby("time")["valor"].agg(["mean", "size"])
+        g = g[g["size"] >= 3].sort_values("mean", ascending=False).head(15)
+        out = [{"time": t, "media": _r(v["mean"]), "transmissoes": int(v["size"])} for t, v in g.iterrows()]
+    else:
+        chaves = {"ano": J["data"].dt.year.astype(str), "mes": J["data"].dt.strftime("%Y-%m"), "competicao": J["competicao"],
+                  "transmissora": J["transmissora"], "dia_semana": J["dia_semana"], "hora": J["hora_inicio"].str[:2] + "h"}
+        k = chaves.get(agrupar_por, chaves["ano"])
+        out = []
+        for chave, g in J.groupby(k):
+            top = g.loc[g["valor"].idxmax()]
+            out.append({"grupo": chave, "media": _r(g["valor"].mean()), "transmissoes": len(g),
+                        "melhor_jogo": f"{top['partida']} ({top['data']:%d/%m/%Y}, {top['transmissora']}): {_r(top['valor'])}"})
+        if agrupar_por == "dia_semana":
+            out.sort(key=lambda l: futebol.DIAS.index(l["grupo"]) if l["grupo"] in futebol.DIAS else 9)
+    extra = {}
+    if time:
+        alvo = futebol._sa(time)
+        casa = J[J["partida"].map(lambda p: alvo in futebol._sa(re.split(r"\s+X\s+", str(p).upper())[0]))]
+        fora = J.drop(casa.index)
+        base, _ = _filtra_fut(fonte, metrica, None, competicoes, transmissora, inicio, fim, padrao_principais=False)
+        extra = {"media_como_mandante": _r(casa["valor"].mean()) if len(casa) else None, "jogos_mandante": len(casa),
+                 "media_como_visitante": _r(fora["valor"].mean()) if len(fora) else None, "jogos_visitante": len(fora),
+                 "media_de_todos_os_jogos_das_mesmas_competicoes": _r(base["valor"].mean()) if len(base) else None}
+    return {"metrica": metrica, "agrupar_por": agrupar_por, "filtros": filtros, "transmissoes": len(J),
+            "media_geral": _r(J["valor"].mean()), **extra, "linhas": out}
+
+
+def f_fut_concorrencia(fonte, metrica="Audiência", time=None, competicoes=None, transmissora=None, inicio=None, fim=None):
+    if fonte.fut is None or len(fonte.fut) == 0:
+        return {"erro": "o painel não tem dados de futebol carregados"}
+    J, filtros = _filtra_fut(fonte, metrica, time, competicoes, transmissora, inicio, fim)
+    if J.empty:
+        return {"filtros": filtros, "erro": "nenhuma transmissão com esses filtros"}
+    import futebol
+    emis = [e for e in futebol.EMISSORAS if e in J.columns and not (metrica == "Share" and e.startswith("TLE"))]
+    rivais = [e for e in emis if e not in futebol.AGREGADOS]
+    linhas = []
+    for t, g in J.groupby("transmissora"):
+        van = [r["valor"] - max(r[e] for e in rivais if e != t and pd.notna(r.get(e)))
+               for _, r in g.iterrows() if any(e != t and pd.notna(r.get(e)) for e in rivais)]
+        linhas.append({"transmissora": t, "transmissoes": len(g), "media_da_transmissora": _r(g["valor"].mean()),
+                       "media_de_cada_emissora_no_horario": {e: _r(g[e].mean()) for e in emis if g[e].notna().any()},
+                       "vantagem_media_sobre_a_2a": _r(np.mean(van)) if van else None})
+    return {"metrica": metrica, "filtros": filtros, "linhas": linhas}
+
+
+_FUT_COMUM = {
+    "metrica": {"type": "string", "enum": ["Audiência", "Share"]},
+    "time": {"type": "string", "description": "Time ou seleção, como aparece nas partidas (ex.: 'Bahia', 'Vitoria', 'Brasil'). "
+                                              "'Ba-Vi' = os clássicos Bahia × Vitória."},
+    "competicoes": {"type": "array", "items": {"type": "string"},
+                    "description": "Brasileirão Série A, Seleção Brasileira, Seleção Brasileira (feminina), Copa do Mundo (outras "
+                                   "seleções), Outros campeonatos. Vazio = Série A e Seleção (ou, com time, todas)."},
+    "transmissora": {"type": "string", "description": "TV Bahia (Globo), Record, SBT, Band ou TVE Bahia (vazio = todas)."},
+    "inicio": {"type": "string", "description": "AAAA-MM"}, "fim": {"type": "string", "description": "AAAA-MM"}}
+
+
 _REC_TXT = ("Faixa ('6h às 24h', '7h às 24h') ou nome de um programa local, que significa o HORÁRIO do programa "
             "(ex.: 'BATV' = o que cada emissora marcou no horário do BATV). Padrão: 6h às 24h.")
 FERRAMENTAS = {
+    "futebol_jogos": (f_fut_jogos, "FUTEBOL: transmissões de jogos (uma por emissora), ordenadas pelo valor da emissora que "
+                      "transmitiu, com a média do filtro. Use para 'maior audiência', 'jogos do Bahia', 'piores jogos'.", {
+        **_FUT_COMUM, "ordem": {"type": "string", "enum": ["desc", "asc"]}, "limite": {"type": "integer"}}, []),
+    "futebol_resumo": (f_fut_resumo, "FUTEBOL: média e número de transmissões agrupados por ano, mês, competição, "
+                       "transmissora, dia da semana, hora ou time; com 'time', traz também mandante × visitante e a média das "
+                       "competições para comparar.", {
+        "agrupar_por": {"type": "string", "enum": ["ano", "mes", "competicao", "transmissora", "dia_semana", "hora", "time"]},
+        **_FUT_COMUM}, ["agrupar_por"]),
+    "futebol_concorrencia": (f_fut_concorrencia, "FUTEBOL: por transmissora, a média de cada emissora no horário dos jogos e a "
+                             "vantagem média da transmissora sobre a 2ª emissora mais vista.", {**_FUT_COMUM}, []),
     "concorrencia_ranking": (f_conc_ranking, "CONCORRÊNCIA: ranking das emissoras (TV Bahia e concorrentes) num mês e recorte, "
                              "com variações vs mês anterior e vs ano anterior, a líder e a vantagem da TV Bahia sobre a melhor "
                              "concorrente.", {
@@ -663,6 +852,17 @@ def executar(nome, args, fonte):
     return out
 
 
+def _fut_txt(fonte):
+    if fonte.fut is None or len(fonte.fut) == 0:
+        return "- FUTEBOL: sem dados carregados no painel."
+    j = fonte.jogos("Audiência")
+    comps = ", ".join(f"{c} ({n})" for c, n in j["competicao"].value_counts().items())
+    return (f"- FUTEBOL (ferramentas futebol_*): {len(j)} transmissões de {j['data'].min():%m/%Y} a {j['data'].max():%m/%Y}; "
+            f"competições: {comps}. Valor de um jogo = audiência/share da emissora que TRANSMITIU; as outras emissoras "
+            "aparecem como concorrência no mesmo horário. Um jogo passado em duas emissoras conta uma vez para cada uma. "
+            "Perguntas sobre jogos, times (Bahia, Vitória...), Série A, Seleção ou Copa usam estas ferramentas.")
+
+
 def instrucoes(fonte):
     b = fonte.base
     ini, fim = (b["mes"].min(), b["mes"].max()) if len(b) else (None, None)
@@ -685,6 +885,7 @@ DADOS (consulte SEMPRE pelas ferramentas; nunca invente números):
 - "6h às 24h" e "7h às 24h" são as FAIXAS (a emissora no dia todo); os demais são programas locais.
 - Meses com dado: {_mes_txt(ini) if ini is not None else '–'} a {_mes_txt(fim) if fim is not None else '–'}.
 {conc_txt.rstrip()}
+{_fut_txt(fonte)}
 - Projeção dos programas (modelo mensal): dados até {f"{corte:%d/%m/%Y}" if corte is not None else 'sem rodada'}.
 - Projeção das faixas (modelo diário): {diar or 'sem rodada'}.
 {"- ATENÇÃO: estes são DADOS FICTÍCIOS de demonstração." if fonte.demo else ""}
@@ -790,7 +991,8 @@ def descreve_consulta(c):
     nomes = {"serie_mensal": "Série mensal", "ranking": "Ranking", "projecao_programas": "Projeção dos programas",
              "projecao_faixa": "Projeção da faixa", "comparar_periodos": "Comparação de períodos",
              "concorrencia_ranking": "Concorrência · ranking", "concorrencia_serie": "Concorrência · série",
-             "concorrencia_vantagem": "Concorrência · vantagem"}
+             "concorrencia_vantagem": "Concorrência · vantagem", "futebol_jogos": "Futebol · jogos",
+             "futebol_resumo": "Futebol · resumo", "futebol_concorrencia": "Futebol · concorrência nos jogos"}
     a = c.get("args") or {}
     det = " · ".join(f"{k}: {', '.join(map(str, v)) if isinstance(v, list) else v}" for k, v in a.items() if v not in (None, "", []))
     return f"{nomes.get(c.get('ferramenta'), c.get('ferramenta'))}" + (f" ({det})" if det else "")
@@ -1057,6 +1259,28 @@ def graficos(consultas, cores=None, maximo=2):
                 series = [(e, "#2a78d6" if e == TVB else "#8a8984" if e == OUTRAS else PALETA[1 + rivais.index(e) % 6],
                            [(_mes_rot(l["mes"]), l["valor"]) for l in L if l["emissora"] == e]) for e in ems]
                 out.append(svg_linhas(series[:5], f"{r.get('metrica')} · {r.get('recorte')}", f2))
+            elif f == "futebol_jogos":
+                cores_t = {"TV Bahia (Globo)": "#2a78d6", "Record": "#eb6834", "SBT": "#1baf7a", "Band": "#eda100", "TVE Bahia": "#00a3a3"}
+                suf = "%" if r.get("metrica") == "Share" else ""
+                itens = [(_curto(l["partida"].title(), 22), l["valor"], cores_t.get(l["transmissora"], "#8a8984"), f"{br(l['valor'])}{suf}")
+                         for l in L[:10]]
+                out.append(svg_barras(itens, f"{r.get('metrica')} · jogos ({r.get('transmissoes')} no filtro)", lambda v: f"{br(v)}{suf}"))
+            elif f == "futebol_resumo":
+                suf = "%" if r.get("metrica") == "Share" else ""
+                chave = "time" if r.get("agrupar_por") == "time" else "grupo"
+                if r.get("agrupar_por") in ("ano", "mes"):
+                    out.append(svg_linhas([("média", "#2a78d6", [(str(l[chave]) if r.get("agrupar_por") == "ano" else _mes_rot(l[chave]),
+                                                                    l["media"]) for l in L])], f"{r.get('metrica')} média por {r.get('agrupar_por')}", f2))
+                else:
+                    out.append(svg_barras([(_curto(str(l[chave]).title() if chave == "time" else str(l[chave]), 20), l["media"], "#2a78d6",
+                                            f"{br(l['media'])}{suf} · {l['transmissoes']}") for l in L[:12]],
+                                          f"{r.get('metrica')} média por {r.get('agrupar_por').replace('_', ' ')}", lambda v: f"{br(v)}{suf}"))
+            elif f == "futebol_concorrencia":
+                suf = "%" if r.get("metrica") == "Share" else ""
+                itens = [(l["transmissora"].replace(" (Globo)", ""), l["vantagem_media_sobre_a_2a"],
+                          "#1baf7a" if (l["vantagem_media_sobre_a_2a"] or 0) >= 0 else "#e34948", sinal(l["vantagem_media_sobre_a_2a"]))
+                         for l in L if l.get("vantagem_media_sobre_a_2a") is not None]
+                out.append(svg_barras(itens, f"Vantagem da transmissora sobre a 2ª · {r.get('metrica')}", lambda v: sinal(v)))
             elif f == "concorrencia_vantagem":
                 un = r.get("unidade", "")
                 rot = (lambda l: _mes_rot(l["mes"])) if r.get("modo") == "por mês" else (lambda l: l["recorte"].replace("horário do ", ""))
