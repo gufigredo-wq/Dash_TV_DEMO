@@ -1832,9 +1832,22 @@ def pagina_desempenho():
                 'Δ em pontos (pt). Programas: média dos dias em que vão ao ar.</div>', unsafe_allow_html=True)
 
 
+def _aba_segura(nome, func, *args):
+    """Uma aba com problema mostra o erro dentro dela e não derruba o resto (as outras abas, o rodapé e o PIPECO)."""
+    try:
+        func(*args)
+    except Exception as ex:
+        if type(ex).__name__ in ("StopException", "RerunException"):            # controle do próprio Streamlit
+            raise
+        registra("painel.erro_aba", "falha", recurso_tipo="aba", detalhe=f"{nome}: {ex.__class__.__name__}")
+        st.error(f"A aba **{nome}** teve um problema e não pôde ser exibida ({ex.__class__.__name__}: "
+                 f"{str(ex).splitlines()[0][:200] if str(ex) else ''}). O restante do painel segue funcionando. "
+                 f"Versão: {globals().get('VERSAO_PAINEL', '')}.")
+
+
 with paginas[0]:
     st.session_state["_aba_atual"] = "Visão geral"
-    pagina_desempenho()
+    _aba_segura("Visão geral", pagina_desempenho)
 
 
 # =================================================================================== PÁGINA 3 · RESULTADOS DETALHADOS
@@ -2383,8 +2396,7 @@ def pagina_diaria(faixa):
         st.caption("Planilhas do modelo diário com problema: " + "; ".join(f"{k} ({v})" for k, v in erros.items()))
 
 
-with paginas[1]:
-    st.session_state["_aba_atual"] = "Projeções e metas"
+def _aba_projecoes():
     with st.container(key=f"diario_{_chave_slug(faixa_atual())}"):   # trocar a faixa remonta a seção (anima de novo)
         pagina_diaria(faixa_atual())                     # ① faixa escolhida: modelo diário
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -2397,6 +2409,10 @@ with paginas[1]:
         secao(4, "Resultados detalhados dos programas", "tabelas, sensibilidade, acompanhamento do último mês e validação do método")
         pagina_resultados()
 
+
+with paginas[1]:
+    st.session_state["_aba_atual"] = "Projeções e metas"
+    _aba_segura("Projeções e metas", _aba_projecoes)
 
 # =================================================================================== PÁGINA · CONCORRÊNCIA
 ARQ_CONC = os.path.join("dados", "tv_concorrencia.csv")
@@ -2684,7 +2700,7 @@ def pagina_concorrencia():
 
 with paginas[2]:
     st.session_state["_aba_atual"] = "Concorrência"
-    pagina_concorrencia()
+    _aba_segura("Concorrência", pagina_concorrencia)
 
 
 # =================================================================================== PÁGINA · FUTEBOL
@@ -3200,7 +3216,7 @@ def pagina_futebol():
 
 with paginas[3]:
     st.session_state["_aba_atual"] = "Futebol"
-    pagina_futebol()
+    _aba_segura("Futebol", pagina_futebol)
 
 
 # =================================================================================== PÁGINA 5 · ATUALIZAR DADOS
@@ -3687,7 +3703,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "24/11/2026 · Labs · PIPECO responde sobre futebol, visual novo do futebol"
+VERSAO_PAINEL = "24/11/2026 · Labs · PIPECO sobre futebol, abas protegidas contra erros"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
@@ -3970,4 +3986,12 @@ def assistente():
                 st.rerun()
 
 
-assistente()
+try:
+    assistente()
+except Exception as _ex:                       # o PIPECO nunca some em silêncio: se falhar, avisa no canto da tela
+    if type(_ex).__name__ in ("StopException", "RerunException"):
+        raise
+    st.markdown(f'<div style="position:fixed; left:8px; bottom:12px; z-index:1000300; max-width:340px; font-size:.72rem; '
+                f'background:#5c1a1a; color:#fff; padding:8px 10px; border-radius:10px">PIPECO indisponível '
+                f'({html_esc(_ex.__class__.__name__)}: {html_esc(str(_ex)[:140])}). Versão {html_esc(VERSAO_PAINEL)}.</div>',
+                unsafe_allow_html=True)
