@@ -916,26 +916,6 @@ _EFEITOS_JS = r"""
     ms.forEach(m => { if (m.type === "characterData" && m.target.parentElement?.matches(".kpi .v, .anel .gv, .gtxt .gf > b, .fu-hero .pv, .fu-partida .fv")) conta(m.target.parentElement); });
   }).observe(D.body, {childList: true, subtree: true, characterData: true});
   varre(D);
-  // gráficos de uma aba que estava escondida nascem com a largura padrão do Plotly (700 px) e cortam a direita:
-  // quando a aba aparece (ou a janela muda de tamanho), cada gráfico visível recebe a largura do seu cartão
-  function ajustaLarguras() {
-    if (!P.Plotly) return;
-    D.querySelectorAll(".js-plotly-plot").forEach(gd => {
-      if (!gd.offsetParent) return;
-      const w = Math.round(gd.getBoundingClientRect().width), sc = gd.querySelector(".svg-container");
-      // no máximo um ajuste por gráfico e por largura (nunca fica redesenhando o mesmo gráfico)
-      if (w > 50 && sc && Math.abs(sc.getBoundingClientRect().width - w) > 2 && gd.__larguraAjustada !== w) {
-        gd.__larguraAjustada = w;
-        try { P.Plotly.relayout(gd, {width: w}); } catch (e) {}
-      }
-    });
-  }
-  D.addEventListener("click", ev => {
-    if (ev.target.closest && ev.target.closest('[role="tab"]')) [80, 400, 1200, 2500].forEach(t => setTimeout(ajustaLarguras, t));
-  }, true);
-  let _tRes = null;
-  P.addEventListener("resize", () => { clearTimeout(_tRes); _tRes = setTimeout(ajustaLarguras, 300); });
-  setInterval(ajustaLarguras, 4000);          // rede de segurança: gráficos redesenhados depois de um filtro
 
   // ---- cabeçalho: sinal de transmissão (arcos saindo de uma antena) e varredura de tela, bem lentos
   const calmo = P.matchMedia && P.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1089,7 +1069,15 @@ _fx[0].segmented_control("Faixa horária de referência", diario.FAIXAS, default
                               "programas, e as Projeções mostram o modelo diário dessa faixa.")
 _fx[1].markdown(f'<div class="vs" style="margin-top:30px">Faixa em uso: <b>{st.session_state.get("faixa_ref") or tv.FAIXA}</b> · '
                 f'TV Bahia (Globo) · Grande Salvador</div>', unsafe_allow_html=True)
-paginas = st.tabs(["Visão geral", "Projeções e metas", "Concorrência", "Futebol"])
+paginas = st.tabs(["Visão geral", "Projeções e metas", "Concorrência", "Futebol"], key="aba_tv", on_change="rerun")
+ABA_ATIVA = st.session_state.get("aba_tv") or "Visão geral"
+
+
+def _remonta(nome):
+    """O conteúdo da aba é recriado quando ela passa a ser a aberta: os gráficos nascem visíveis, com a largura certa
+    (gráficos criados numa aba escondida ficam com a largura padrão do Plotly, 700 px, e cortavam à direita)."""
+    slug = {"Visão geral": "visao", "Projeções e metas": "projecoes", "Concorrência": "concorrencia", "Futebol": "futebol"}[nome]
+    return st.container(key=f"aba_{slug}_{'aberta' if ABA_ATIVA == nome else 'fundo'}")
 
 
 # =================================================================================== PÁGINA 1 · VISÃO GERAL
@@ -1848,7 +1836,7 @@ def _aba_segura(nome, func, *args):
                  f"Versão: {globals().get('VERSAO_PAINEL', '')}.")
 
 
-with paginas[0]:
+with paginas[0], _remonta("Visão geral"):
     st.session_state["_aba_atual"] = "Visão geral"
     _aba_segura("Visão geral", pagina_desempenho)
 
@@ -2413,7 +2401,7 @@ def _aba_projecoes():
         pagina_resultados()
 
 
-with paginas[1]:
+with paginas[1], _remonta("Projeções e metas"):
     st.session_state["_aba_atual"] = "Projeções e metas"
     _aba_segura("Projeções e metas", _aba_projecoes)
 
@@ -2701,7 +2689,7 @@ def pagina_concorrencia():
                 f'"{concorrencia.OUTRAS}" agrega TV paga e demais canais e fica fora do ranking.</div>', unsafe_allow_html=True)
 
 
-with paginas[2]:
+with paginas[2], _remonta("Concorrência"):
     st.session_state["_aba_atual"] = "Concorrência"
     _aba_segura("Concorrência", pagina_concorrencia)
 
@@ -3222,7 +3210,7 @@ def pagina_futebol():
                 'Os selos com as iniciais substituem os escudos, que são marcas dos clubes.</div>', unsafe_allow_html=True)
 
 
-with paginas[3]:
+with paginas[3], _remonta("Futebol"):
     st.session_state["_aba_atual"] = "Futebol"
     _aba_segura("Futebol", pagina_futebol)
 
@@ -3711,7 +3699,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "25/11/2026 · Labs · listras verticais (Vitória, Sport, Athletico), linha do tempo estável"
+VERSAO_PAINEL = "25/11/2026 · Labs · gráficos das abas com a largura certa, listras verticais"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
