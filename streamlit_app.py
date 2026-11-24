@@ -1071,6 +1071,13 @@ _fx[1].markdown(f'<div class="vs" style="margin-top:30px">Faixa em uso: <b>{st.s
                 f'TV Bahia (Globo) · Grande Salvador</div>', unsafe_allow_html=True)
 paginas = st.tabs(["Visão geral", "Projeções e metas", "Concorrência", "Futebol"], key="aba_tv", on_change="rerun")
 ABA_ATIVA = st.session_state.get("aba_tv") or "Visão geral"
+# velocidade: só a aba aberta é calculada. Todas são calculadas quando alguém pede o PDF (o relatório precisa dos gráficos
+# de todas) e nos testes automáticos (PAINEL_TODAS_ABAS=1).
+TODAS_AS_ABAS = bool(st.session_state.get("_abrir_pdf")) or os.environ.get("PAINEL_TODAS_ABAS") == "1"
+
+
+def _calcula(nome):
+    return TODAS_AS_ABAS or ABA_ATIVA == nome
 
 
 def _remonta(nome):
@@ -1838,7 +1845,8 @@ def _aba_segura(nome, func, *args):
 
 with paginas[0], _remonta("Visão geral"):
     st.session_state["_aba_atual"] = "Visão geral"
-    _aba_segura("Visão geral", pagina_desempenho)
+    if _calcula("Visão geral"):
+        _aba_segura("Visão geral", pagina_desempenho)
 
 
 # =================================================================================== PÁGINA 3 · RESULTADOS DETALHADOS
@@ -2403,7 +2411,8 @@ def _aba_projecoes():
 
 with paginas[1], _remonta("Projeções e metas"):
     st.session_state["_aba_atual"] = "Projeções e metas"
-    _aba_segura("Projeções e metas", _aba_projecoes)
+    if _calcula("Projeções e metas"):
+        _aba_segura("Projeções e metas", _aba_projecoes)
 
 # =================================================================================== PÁGINA · CONCORRÊNCIA
 ARQ_CONC = os.path.join("dados", "tv_concorrencia.csv")
@@ -2691,7 +2700,8 @@ def pagina_concorrencia():
 
 with paginas[2], _remonta("Concorrência"):
     st.session_state["_aba_atual"] = "Concorrência"
-    _aba_segura("Concorrência", pagina_concorrencia)
+    if _calcula("Concorrência"):
+        _aba_segura("Concorrência", pagina_concorrencia)
 
 
 # =================================================================================== PÁGINA · FUTEBOL
@@ -3212,7 +3222,8 @@ def pagina_futebol():
 
 with paginas[3], _remonta("Futebol"):
     st.session_state["_aba_atual"] = "Futebol"
-    _aba_segura("Futebol", pagina_futebol)
+    if _calcula("Futebol"):
+        _aba_segura("Futebol", pagina_futebol)
 
 
 # =================================================================================== PÁGINA 5 · ATUALIZAR DADOS
@@ -3699,7 +3710,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "25/11/2026 · Labs · gráficos das abas com a largura certa, listras verticais"
+VERSAO_PAINEL = "26/11/2026 · Labs · só a aba aberta é calculada (mais rápido)"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
