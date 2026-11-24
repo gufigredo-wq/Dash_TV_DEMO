@@ -57,7 +57,7 @@ TABELAS = {
                     "nome": "texto(40)", "partida": "texto(120)", "quadro": "texto(80)", "competicao": "texto(40)",
                     "transmissora": "texto(30)", "metrica": "texto(12)", "emissora": "texto(40)", "valor": "número",
                     "origem": "texto(200)", "atualizado_em": "data e hora"},
-        "chave": ["data", "hora_inicio", "partida", "metrica", "emissora"]},
+        "chave": ["data", "hora_inicio", "partida", "transmissora", "metrica", "emissora"]},
     # parâmetros editados nos painéis (números oficiais, previsão do BI, metas mensais, bancos excluídos, rodada ativa)
     "painel_parametros": {
         "colunas": {"painel": "texto(10)", "chave": "texto(60)", "valor": "texto longo (JSON)", "atualizado_em": "data e hora"},
@@ -101,6 +101,31 @@ def _metadados():
 def criar_tabelas():
     """Cria as tabelas que ainda não existem (não altera as existentes)."""
     _metadados().create_all(motor())
+
+
+def existe(tabela):
+    """A tabela existe no banco?"""
+    from sqlalchemy import inspect
+    return inspect(motor()).has_table(tabela)
+
+
+def criar_se_faltar(nomes):
+    """Cria só as tabelas pedidas que ainda não existem (as outras não são tocadas). Devolve a lista das criadas.
+    Precisa de permissão de criar tabelas no banco; sem ela, levanta o erro do banco."""
+    md = _metadados()
+    faltam = [n for n in nomes if n in md.tables and not existe(n)]
+    if faltam:
+        md.create_all(motor(), tables=[md.tables[n] for n in faltam])
+    return faltam
+
+
+def ddl(dialeto="postgresql", nomes=None):
+    """CREATE TABLE das tabelas pedidas no dialeto do banco ('postgresql', 'mssql'...), para a TI rodar direto no banco."""
+    from sqlalchemy.dialects import mssql, postgresql, sqlite
+    from sqlalchemy.schema import CreateTable
+    d = {"postgresql": postgresql.dialect(), "mssql": mssql.dialect(), "sqlite": sqlite.dialect()}[dialeto]
+    md = _metadados()
+    return ";\n\n".join(str(CreateTable(md.tables[n]).compile(dialect=d)).strip() for n in (nomes or list(md.tables))) + ";\n"
 
 
 def ler(tabela, colunas=None):
