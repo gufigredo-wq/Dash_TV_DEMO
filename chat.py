@@ -683,7 +683,8 @@ def _filtra_fut(fonte, metrica="Audiência", time=None, competicoes=None, transm
 
 def _jogo_dict(r):
     return {"data": f"{r['data']:%Y-%m-%d}", "dia": r["dia_semana"], "hora": r["hora_inicio"], "partida": r["partida"],
-            "competicao": r["competicao"], "quadro": r["quadro"], "transmissora": r["transmissora"], "valor": _r(r["valor"])}
+            "competicao": r["competicao"], "quadro": r["quadro"], "transmissora": r["transmissora"], "valor": _r(r["valor"]),
+            "tambem_transmitido_por": [{"emissora": e, "valor": _r(v)} for e, v in (r.get("simultanea") or [])]}
 
 
 def f_fut_jogos(fonte, metrica="Audiência", time=None, competicoes=None, transmissora=None, inicio=None, fim=None,
@@ -859,7 +860,8 @@ def _fut_txt(fonte):
     comps = ", ".join(f"{c} ({n})" for c, n in j["competicao"].value_counts().items())
     return (f"- FUTEBOL (ferramentas futebol_*): {len(j)} transmissões de {j['data'].min():%m/%Y} a {j['data'].max():%m/%Y}; "
             f"competições: {comps}. Valor de um jogo = audiência/share da emissora que TRANSMITIU; as outras emissoras "
-            "aparecem como concorrência no mesmo horário. Um jogo passado em duas emissoras conta uma vez para cada uma. "
+            "aparecem como concorrência no mesmo horário. Um jogo passado em duas emissoras conta uma vez para cada uma "
+            "(o campo tambem_transmitido_por mostra a outra transmissão). "
             "Perguntas sobre jogos, times (Bahia, Vitória...), Série A, Seleção ou Copa usam estas ferramentas.")
 
 
