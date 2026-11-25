@@ -2797,6 +2797,17 @@ def _partida_selos(partida, tam=20):
     return (f'{_selo(a, tam)}{html_esc(_time_fmt(a))} <span style="opacity:.5">×</span> {_selo(b, tam)}{html_esc(_time_fmt(b))}')
 
 
+def _tambem(r, met, curto=False):
+    """Selo das outras emissoras que transmitiram a mesma partida no mesmo horário ('📺 também na SBT · 8,31')."""
+    outras = r.get("simultanea") if hasattr(r, "get") else None
+    if not isinstance(outras, list) or not outras:
+        return ""
+    suf = "%" if met == "Share" else ""
+    txt = " · ".join(f"{e.replace(' (Globo)', '')}{'' if curto else ' ' + br(v) + suf}" for e, v in outras)
+    return (f'<span class="fu-tambem" title="A mesma partida, no mesmo horário, também passou em: {html_esc(txt)}">'
+            f'📺 também {"na" if len(outras) == 1 else "em"} {html_esc(txt)}</span>')
+
+
 def _chip_em(e):
     return f'<span class="fu-chip" style="--ec:{COR_FUT.get(e, CINZA)}">{html_esc(e.replace(" (Globo)", ""))}</span>'
 
@@ -2850,6 +2861,9 @@ def _css_futebol():
 .fu-partida .fl {{text-align:center; font-size:.7rem; color:{CINZA}; margin-bottom:10px;}}
 .fu-partida .info {{display:flex; flex-wrap:wrap; gap:6px; justify-content:center;}}
 .fu-partida .info span.t {{font-size:.72rem; padding:2px 8px; border-radius:999px; background:{CAMPO}; border:1px solid {BORDA}; color:{TINTA2};}}
+.fu-tambem {{display:inline-flex; align-items:center; gap:3px; margin-left:6px; padding:0 7px; border-radius:999px; font-size:.68rem;
+    font-weight:600; white-space:nowrap; color:{TINTA}; background:color-mix(in srgb, #eda100 18%, transparent);
+    border:1px dashed color-mix(in srgb, #eda100 70%, transparent);}}
 .fu-tab {{max-height:470px; overflow:auto; border:1px solid {BORDA}; border-radius:12px;}}
 .fu-tab table {{width:100%; border-collapse:separate; border-spacing:0; font-size:.78rem;}}
 .fu-tab th {{position:sticky; top:0; z-index:1; background:{CAMPO}; color:{CINZA}; font-size:.64rem; text-transform:uppercase;
@@ -2882,7 +2896,8 @@ def _cartao_partida(r, met, titulo):
     return (f'<div class="fu-partida" style="--ec:{cor}"><div class="cab"><span>{titulo}</span>{_chip_em(r["transmissora"])}</div>{jogo}'
             f'<span class="fv">{br(r["valor"])}{suf}</span><div class="fl">{tv.SIGLA[met]} · {html_esc(_nome_quadro(r["quadro"]))}</div>'
             f'<div class="info"><span class="t">📅 {_dmy(r["data"])} · {str(r["dia_semana"]).lower()}</span>'
-            f'<span class="t">🕒 {r["hora_inicio"]}–{r["hora_fim"] or "?"}</span><span class="t">{rot_mes(r["mes"])}</span></div></div>')
+            f'<span class="t">🕒 {r["hora_inicio"]}–{r["hora_fim"] or "?"}</span><span class="t">{rot_mes(r["mes"])}</span>'
+            f'{_tambem(r, met)}</div></div>')
 
 
 def _tabela_classificacao(J, met, emis_cols, limite=400):
@@ -2896,7 +2911,8 @@ def _tabela_classificacao(J, met, emis_cols, limite=400):
     linhas = []
     for k, (_, r) in enumerate(T.iterrows(), 1):
         a, b = _times(r["partida"])
-        pj = f'<span class="pj">{_partida_selos(r["partida"], 22)}</span>' if b else html_esc(str(r["partida"]))
+        pj = (f'<span class="pj">{_partida_selos(r["partida"], 22)}{_tambem(r, met)}</span>' if b
+              else html_esc(str(r["partida"])) + _tambem(r, met))
         cor = COR_FUT.get(r["transmissora"], CINZA)
         cels = "".join(f"<td class='n' style='{'font-weight:700; color:' + COR_FUT.get(e, TINTA) if e == r['transmissora'] else 'color:' + TINTA2}'>"
                        f"{br(r[e]) if e in r and pd.notna(r[e]) else '–'}</td>" for e in mostrar)
@@ -3195,6 +3211,28 @@ def pagina_futebol():
                             marker_color=cores_c.get(c, CINZA), hovertemplate=f"<b>{CURTO_COMP.get(c, c)}</b> · %{{x}}: %{{y:+.2f}} {un}<extra></extra>")
         layout(fig, 320, legenda=True).update_layout(barmode="group", bargap=.3)
         st.plotly_chart(fig, config=CFG, key="fu_vant")
+
+    sim = J[J["simultanea"].map(lambda x: isinstance(x, list) and len(x) > 0)] if "simultanea" in J.columns else J.iloc[0:0]
+    if len(sim):
+        jogos_sim = sim.drop_duplicates(["data", "hora_inicio", "partida"]).sort_values("data", ascending=False).head(14)
+        with cartao("Mesmo jogo, mais de uma emissora",
+                    f"{sim.drop_duplicates(['data', 'hora_inicio', 'partida']).shape[0]} partidas transmitidas ao mesmo tempo por duas "
+                    f"emissoras · {tv.SIGLA[met]} de cada transmissão · as mais recentes"):
+            fig = go.Figure()
+            rot = [f"{_partida_txt(r['partida'])} · {_dmy(r['data'])}" for _, r in jogos_sim.iterrows()]
+            emis_sim = [e for e in futebol.EMISSORAS if e in set(sim["transmissora"])]
+            for e in emis_sim:
+                vals = []
+                for _, r in jogos_sim.iterrows():
+                    linha = sim[(sim["data"] == r["data"]) & (sim["hora_inicio"] == r["hora_inicio"]) & (sim["partida"] == r["partida"]) &
+                                (sim["transmissora"] == e)]
+                    vals.append(linha["valor"].iloc[0] if len(linha) else None)
+                fig.add_bar(y=rot, x=vals, orientation="h", name=e, marker_color=COR_FUT.get(e, CINZA),
+                            text=[br(v) if v is not None else "" for v in vals], textposition="outside", textfont=dict(size=10),
+                            cliponaxis=False, hovertemplate=f"<b>{e}</b> · %{{y}}: %{{x:.2f}}{suf}<extra></extra>")
+            layout(fig, 60 + 34 * len(jogos_sim), legenda=True).update_layout(barmode="group", bargap=.25, bargroupgap=.05)
+            fig.update_yaxes(autorange="reversed", tickformat="", tickfont=dict(size=10))
+            st.plotly_chart(fig, config=CFG, key="fu_simult")
 
     # ---- 6. quando o futebol rende mais
     secao(6, "Quando o futebol rende mais", f"{met.lower()} médio por dia da semana e horário de início · número de transmissões em cada célula")
@@ -3710,7 +3748,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "26/11/2026 · Labs · só a aba aberta é calculada (mais rápido)"
+VERSAO_PAINEL = "26/11/2026 · Labs · jogos em duas emissoras destacados, só a aba aberta é calculada"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
