@@ -220,6 +220,17 @@ def jogos(df, metrica):
     j = info.merge(larga, on=chave, how="left")
     j["valor"] = [r[r["transmissora"]] if r["transmissora"] in j.columns else np.nan for _, r in j.iterrows()]
     j["ano"] = pd.to_datetime(j["data"]).dt.year
+    # transmissão simultânea: quem mais passou a mesma partida no mesmo horário (e quanto marcou). Só as partidas repetidas
+    # são examinadas, para ficar rápido mesmo com milhares de transmissões.
+    chave_p = ["data", "hora_inicio", "partida"]
+    j["simultanea"] = [[] for _ in range(len(j))]
+    rep = j.duplicated(chave_p, keep=False)
+    if rep.any():
+        sub = j[rep]
+        for _, g in sub.groupby(chave_p):
+            pares = list(zip(g["transmissora"], g["valor"]))
+            for idx, t in zip(g.index, g["transmissora"]):
+                j.at[idx, "simultanea"] = [(t2, v2) for t2, v2 in pares if t2 != t]
     return j.sort_values(["data", "hora_inicio"]).reset_index(drop=True)
 
 
@@ -330,11 +341,12 @@ def gera_demo(seed=20261112, ate="2026-10-31"):
             ("2025-03-20", 3), ("2025-03-25", 4), ("2025-06-05", 5), ("2025-06-10", 6), ("2025-09-04", 7), ("2025-09-09", 8)]
     for k, (dt, r) in enumerate(elim):
         partida = f"BRASIL X {_RIVAIS_SEL[r]}" if k % 2 == 0 else f"{_RIVAIS_SEL[r]} X BRASIL"
-        add(pd.Timestamp(dt), "21:45" if k % 3 else "20:00", partida, "FUT ELIMINAT COPA MUNDO VIVO", "GLOBO", ("S", 1, 0))
+        trans = "GLOBO+TV BAND" if dt.startswith("2025") else "GLOBO"          # em 2025, a Band também transmitiu
+        add(pd.Timestamp(dt), "21:45" if k % 3 else "20:00", partida, "FUT ELIMINAT COPA MUNDO VIVO", trans, ("S", 1, 0))
     for k, dt in enumerate(["2024-03-23", "2024-03-26", "2024-06-08", "2024-06-12", "2025-10-10", "2025-10-14",
                             "2025-11-15", "2026-03-26", "2026-03-31"]):
         add(pd.Timestamp(dt), "16:00" if k % 2 else "17:00", f"BRASIL X {_AMISTOSOS[k % len(_AMISTOSOS)]}",
-            "FUT AMIST SEL BRASILEIRA VIVO", "GLOBO", ("S", 0, 0))
+            "FUT AMIST SEL BRASILEIRA VIVO", "GLOBO+SBT" if dt.startswith("2026") else "GLOBO", ("S", 0, 0))
     copa = [("2026-06-13", "NIGERIA"), ("2026-06-19", "SUECIA"), ("2026-06-24", "AUSTRALIA"),
             ("2026-06-29", "GANA"), ("2026-07-04", "DINAMARCA"), ("2026-07-09", "PORTUGAL")]
     for k, (dt, adv) in enumerate(copa):                         # jogos e adversários inventados (dados fictícios)
@@ -400,7 +412,8 @@ def gera_demo(seed=20261112, ate="2026-10-31"):
                  "Conteúdo de TV/Vídeo sem referência": .08}
         refs = {trans: ref}
         for t2 in transmissoras[1:]:                            # a 2ª emissora do jogo simultâneo
-            refs[t2] = {"SBT": 7.5 + rng.normal(0, 1.8), "TV BAND": ref * 1.6, "TVE BAHIA": ref * .55}.get(t2, ref * .4)
+            refs[t2] = {"SBT": 7.5 + rng.normal(0, 1.8), "TVE BAHIA": ref * .55,
+                        "TV BAND": (4.2 + rng.normal(0, 1.1)) if tipo_c in "SC" else ref * 1.6}.get(t2, ref * .4)
         resto = tle - sum(refs.values())
         for t2 in refs:
             pesos.pop(t2, None)
