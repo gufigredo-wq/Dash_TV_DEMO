@@ -9,6 +9,8 @@ Configuração: só a variável de ambiente PAINEL_DB_URL (no Labs, definida pel
 Qualquer banco aceito pelo SQLAlchemy funciona (PostgreSQL, SQL Server, MySQL, Oracle), com o driver correspondente
 instalado (ex.: SQL Server: mssql+pyodbc://... com o ODBC Driver 18). As tabelas estão em TABELAS e em ESQUEMA_BANCO.md.
 """
+
+VERSAO_MODULO = "27/11/2026"           # o streamlit_app.py confere: arquivos da mesma entrega têm a mesma versão
 import io
 import json
 import os
