@@ -1029,28 +1029,29 @@ if PAR.get("demo"):
     st.markdown('<div class="demo">🧪 <b>Ambiente de demonstração.</b> Todos os números deste painel são <b>fictícios</b>, gerados '
                 'só para testar e apresentar as funcionalidades. Eles não representam a audiência real e as concorrentes têm nomes '
                 'inventados.</div>', unsafe_allow_html=True)
-if getattr(st, "_plotly_versao", 0) < 2:
-    # (1) no modo escuro, os gráficos usam só as cores do painel; (2) cada gráfico desenhado fica registrado na sessão,
-    # com o título do cartão, para o relatório em PDF. Tudo é lido da sessão de cada pessoa.
-    st._plotly_original = getattr(st, "_plotly_original", st.plotly_chart)
+# (1) no modo escuro, os gráficos usam só as cores do painel; (2) cada gráfico desenhado fica registrado na sessão,
+# com o título do cartão, para o relatório em PDF; (3) cada gráfico ganha o botão de expandir. Tudo é lido da sessão de
+# cada pessoa. A função é instalada de novo A CADA EXECUÇÃO: quando o código é atualizado sem reiniciar o servidor
+# (Streamlit Cloud, publicação do Labs), a versão nova passa a valer na hora. Só a original do Streamlit é guardada uma vez.
+if not hasattr(st, "_plotly_original"):
+    st._plotly_original = st.plotly_chart
 
-    def _plotly_tema(fig, *a, **k):
-        ss_ = st.session_state
-        if ss_.get("tema_escuro"):
-            k.setdefault("theme", None)
-        chave = str(k.get("key", ""))
-        if chave and not chave.startswith("dlg_") and isinstance(ss_.get("_graf_run"), list):
-            ss_["_graf_run"].append({"chave": chave, "titulo": ss_.get("_card_titulo", ""), "sub": ss_.get("_card_sub", ""),
-                                     "aba": ss_.get("_aba_atual", ""), "fig": fig})
-        saida = st._plotly_original(fig, *a, **k)
-        # no futebol, só os dois de concorrência têm o botão (os outros já são grandes ou têm o próprio detalhe)
-        expande = chave not in ("v_curva", "v_calor") and (not chave.startswith("fu_") or chave in ("fu_conc", "fu_vant"))
-        if chave and not chave.startswith("dlg_") and expande and not ss_.get("_em_dialogo"):
-            st.button("", icon=":material/open_in_full:", key=f"zoom_{chave}",
-                      on_click=lambda c=chave: ss_.update(_zoom=c))           # o canto do cartão (CSS .st-key-zoom_*)
-        return saida
-    st.plotly_chart = _plotly_tema
-    st._plotly_versao = 2
+def _plotly_tema(fig, *a, **k):
+    ss_ = st.session_state
+    if ss_.get("tema_escuro"):
+        k.setdefault("theme", None)
+    chave = str(k.get("key", ""))
+    if chave and not chave.startswith("dlg_") and isinstance(ss_.get("_graf_run"), list):
+        ss_["_graf_run"].append({"chave": chave, "titulo": ss_.get("_card_titulo", ""), "sub": ss_.get("_card_sub", ""),
+                                 "aba": ss_.get("_aba_atual", ""), "fig": fig})
+    saida = st._plotly_original(fig, *a, **k)
+    # no futebol, só os dois de concorrência têm o botão (os outros já são grandes ou têm o próprio detalhe)
+    expande = chave not in ("v_curva", "v_calor") and (not chave.startswith("fu_") or chave in ("fu_conc", "fu_vant"))
+    if chave and not chave.startswith("dlg_") and expande and not ss_.get("_em_dialogo"):
+        st.button("", icon=":material/open_in_full:", key=f"zoom_{chave}",
+                  on_click=lambda c=chave: ss_.update(_zoom=c))           # o canto do cartão (CSS .st-key-zoom_*)
+    return saida
+st.plotly_chart = _plotly_tema
 st.session_state["_graf_run"] = []
 st.session_state["_kpis_run"] = []
 
@@ -3815,7 +3816,7 @@ if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "27/11/2026 · Labs · expandir todos os gráficos, checagem de versão dos arquivos"
+VERSAO_PAINEL = "27/11/2026 · Labs · botão de expandir (vale sem reiniciar o servidor), checagem de versão"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
