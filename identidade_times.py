@@ -5,6 +5,8 @@ listras e a sigla. Tudo em SVG gerado aqui, sem imagens externas (funciona no La
 selo(nome, tam)  -> HTML (SVG) redondo do time ou seleção
 nome(nome)       -> nome para exibir, com acentos ("VITORIA BA" -> "Vitória", "COREIA SUL" -> "Coreia do Sul")
 """
+
+VERSAO_MODULO = "27/11/2026"           # o streamlit_app.py confere: arquivos da mesma entrega têm a mesma versão
 import html
 import itertools
 import math
