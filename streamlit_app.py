@@ -26,7 +26,21 @@ import diario  # noqa: E402
 from streamlit.errors import StreamlitAPIException  # noqa: E402
 import concorrencia  # noqa: E402  (concorrência: planilha, leitura e dados fictícios)
 import futebol  # noqa: E402  (futebol: Série A e Seleção, no formato do BI de partidas)
-import identidade_times  # noqa: E402  (bandeiras das seleções e cores dos clubes)
+try:                                           # bandeiras e cores dos times (só visual): sem o arquivo, o painel segue
+    import identidade_times  # noqa: E402
+except ImportError:
+    identidade_times = None
+
+# arquivos de entregas diferentes misturados quebram o painel de jeitos difíceis de entender: aqui o painel confere a
+# versão de cada módulo e avisa no topo qual arquivo precisa ser atualizado
+VERSAO_MODULOS = "27/11/2026"
+
+
+def _modulos_desatualizados():
+    mods = {"chat.py": chat, "futebol.py": futebol, "concorrencia.py": concorrencia, "banco.py": banco,
+            "identidade_times.py": identidade_times}
+    return [f"{n} ({getattr(m, 'VERSAO_MODULO', 'versão antiga') if m is not None else 'ausente'})"
+            for n, m in mods.items() if m is None or getattr(m, "VERSAO_MODULO", None) != VERSAO_MODULOS]
 import chat  # noqa: E402  (assistente do painel: fase 1, respostas prontas)
 import banco  # noqa: E402  (banco de dados da empresa, opcional: sem conexão configurada, lê os arquivos de dados/)
 
@@ -414,11 +428,12 @@ st.markdown(f"""<style>
 .stButton button, .stDownloadButton button {{border-radius:10px; transition:transform .15s, box-shadow .2s, background .2s;}}
 .stButton button:hover, .stDownloadButton button:hover {{transform:translateY(-1px); box-shadow:0 6px 14px rgba(42,120,214,.18);}}
 [data-testid="stSegmentedControl"] button {{transition:all .2s;}}
-/* botão de expandir no canto dos cartões */
-.st-key-exp_calor, .st-key-exp_curva {{position:absolute !important; top:8px; right:10px; width:auto !important; z-index:3;}}
-.st-key-exp_calor button, .st-key-exp_curva button {{min-height:0; height:30px; width:30px; padding:0; border-radius:9px;
-    border:1px solid rgba(16,24,64,.10); background:rgba(255,255,255,.9); color:#2a78d6;}}
-.st-key-exp_calor button:hover, .st-key-exp_curva button:hover {{background:#2a78d6; color:#fff; transform:scale(1.06);}}
+/* botão de expandir no canto dos cartões (os dois com janela própria e todos os outros gráficos) */
+.st-key-exp_calor, .st-key-exp_curva, [class*="st-key-zoom_"] {{position:absolute !important; top:8px; right:10px; width:auto !important; z-index:3;}}
+.st-key-exp_calor button, .st-key-exp_curva button, [class*="st-key-zoom_"] button {{min-height:0; height:30px; width:30px; padding:0;
+    border-radius:9px; border:1px solid rgba(16,24,64,.10); background:rgba(255,255,255,.9); color:#2a78d6; opacity:.75;}}
+.st-key-exp_calor button:hover, .st-key-exp_curva button:hover, [class*="st-key-zoom_"] button:hover {{background:#2a78d6; color:#fff;
+    transform:scale(1.06); opacity:1;}}
 /* janela expandida */
 [data-testid="stDialog"] [role="dialog"] {{border-radius:18px; box-shadow:0 30px 80px rgba(0,21,100,.25);}}
 .mini {{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:8px; margin:4px 0 10px;}}
@@ -1027,7 +1042,13 @@ if getattr(st, "_plotly_versao", 0) < 2:
         if chave and not chave.startswith("dlg_") and isinstance(ss_.get("_graf_run"), list):
             ss_["_graf_run"].append({"chave": chave, "titulo": ss_.get("_card_titulo", ""), "sub": ss_.get("_card_sub", ""),
                                      "aba": ss_.get("_aba_atual", ""), "fig": fig})
-        return st._plotly_original(fig, *a, **k)
+        saida = st._plotly_original(fig, *a, **k)
+        # no futebol, só os dois de concorrência têm o botão (os outros já são grandes ou têm o próprio detalhe)
+        expande = chave not in ("v_curva", "v_calor") and (not chave.startswith("fu_") or chave in ("fu_conc", "fu_vant"))
+        if chave and not chave.startswith("dlg_") and expande and not ss_.get("_em_dialogo"):
+            st.button("", icon=":material/open_in_full:", key=f"zoom_{chave}",
+                      on_click=lambda c=chave: ss_.update(_zoom=c))           # o canto do cartão (CSS .st-key-zoom_*)
+        return saida
     st.plotly_chart = _plotly_tema
     st._plotly_versao = 2
 st.session_state["_graf_run"] = []
@@ -1069,6 +1090,10 @@ _fx[0].segmented_control("Faixa horária de referência", diario.FAIXAS, default
                               "programas, e as Projeções mostram o modelo diário dessa faixa.")
 _fx[1].markdown(f'<div class="vs" style="margin-top:30px">Faixa em uso: <b>{st.session_state.get("faixa_ref") or tv.FAIXA}</b> · '
                 f'TV Bahia (Globo) · Grande Salvador</div>', unsafe_allow_html=True)
+_desat = _modulos_desatualizados()
+if _desat:
+    st.warning("**Arquivos de versões diferentes.** Estes arquivos não são da mesma entrega do streamlit_app.py e podem fazer "
+               "partes do painel falharem: " + ", ".join(_desat) + f". Suba os arquivos da entrega {VERSAO_MODULOS} juntos.")
 paginas = st.tabs(["Visão geral", "Projeções e metas", "Concorrência", "Futebol"], key="aba_tv", on_change="rerun")
 ABA_ATIVA = st.session_state.get("aba_tv") or "Visão geral"
 # velocidade: só a aba aberta é calculada. Todas são calculadas quando alguém pede o PDF (o relatório precisa dos gráficos
@@ -2723,7 +2748,7 @@ def carregar_fut(assinatura=None):
     d["data"] = pd.to_datetime(d["data"])
     d["valor"] = pd.to_numeric(d["valor"], errors="coerce")
     d["hora_inicio"] = d["hora_inicio"].astype(str).str[:5]
-    return d
+    return futebol.normaliza_partidas(d)              # "(SBT)" da planilha convertida não duplica a transmissão
 
 
 def _assinatura_fut():
@@ -2771,6 +2796,8 @@ def _media_por(J, chave, emissoras):
 
 def _time_fmt(t):
     """Nome do time ou seleção para exibir (com acentos; "2T" vira "(2º tempo)")."""
+    if identidade_times is None:
+        return " ".join(w.capitalize() for w in str(t).split())
     return identidade_times.nome(t)
 
 
@@ -2781,6 +2808,10 @@ def _times(partida):
 
 def _selo(time, tam=34):
     """Bandeira da seleção ou selo com as cores e listras do uniforme do clube, com a sigla em branco."""
+    if identidade_times is None:                 # sem o identidade_times.py: selo simples com as iniciais
+        ini = html_esc("".join(w[0] for w in str(time).split()[:3]).upper())
+        return (f'<span style="display:inline-grid; place-items:center; width:{tam}px; height:{tam}px; border-radius:50%; '
+                f'background:#5b6b7f; color:#fff; font-weight:800; font-size:{tam * .34:.0f}px">{ini}</span>')
     return identidade_times.selo(time, tam)
 
 
@@ -2964,6 +2995,9 @@ def _ficha_time(busca, J, Jcomp, met):
 
 def pagina_futebol():
     _css_futebol()
+    if identidade_times is None:
+        st.warning("O arquivo **identidade_times.py** não está no painel: as bandeiras e as cores dos times aparecem como "
+                   "selos simples. Ele deve ficar na raiz do repositório, ao lado do streamlit_app.py.")
     if FUT.empty:
         secao(1, "Futebol", "audiência e share das transmissões de futebol, com a concorrência (mesma base do BI de partidas)")
         msg = _msg_tabela("tv_futebol", _ERRO_FUT) if _ERRO_FUT else "Ainda não há jogos de futebol no painel."
@@ -3047,17 +3081,21 @@ def pagina_futebol():
             with cartao(f"{met} média {tit}", f"{tv.SIGLA[met]} · transmissoras: média dos jogos que transmitiram"):
                 fig = go.Figure()
                 base_ = J.assign(ano=J["data"].dt.year)
+                # eixo com TODOS os meses (ou anos) do período, em ordem; quem não transmitiu num mês fica vazio ali
+                eixo = (list(range(int(base_["ano"].min()), int(base_["ano"].max()) + 1)) if chave == "ano"
+                        else list(pd.date_range(J["mes"].min(), J["mes"].max(), freq="MS")))
+                rot_x = [str(a) for a in eixo] if chave == "ano" else [rot_mes(m) for m in eixo]
                 for e, s in _media_por(base_, chave, em_graf or linhas_disp).items():
-                    x = [str(a) for a in s.index] if chave == "ano" else [rot_mes(m) for m in s.index]
-                    fig.add_scatter(x=x, y=s.values, name=e.replace(" (total ligados)", ""), mode="lines+markers",
+                    s = s.reindex(eixo)
+                    x = rot_x
+                    fig.add_scatter(x=x, y=s.values, name=e.replace(" (total ligados)", ""), mode="lines+markers", connectgaps=False,
                                     line=dict(color=COR_FUT.get(e, CINZA), width=3 if e == futebol.TVB else 2,
                                               dash="dot" if e in futebol.AGREGADOS else "solid", shape="spline", smoothing=.6),
                                     marker=dict(size=7 if chave == "ano" else 5),
                                     hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y:.2f}}{suf}<extra></extra>")
                 layout(fig, 250, legenda=True)
-                fig.update_xaxes(tickangle=-45 if chave == "mes" else 0, tickfont=dict(size=10))
-                if chave == "ano":
-                    fig.update_xaxes(type="category")
+                fig.update_xaxes(tickangle=-45 if chave == "mes" else 0, tickfont=dict(size=10), type="category",
+                                 categoryorder="array", categoryarray=rot_x)
                 st.plotly_chart(fig, config=CFG, key=kk)
     with c2:
         st.markdown(_cartao_partida(top, met, f"Top 1 · {met.lower()}"), unsafe_allow_html=True)
@@ -3151,13 +3189,15 @@ def pagina_futebol():
     with c2, cartao(f"{met} média por {'trimestre' if longo else 'mês'} e emissora", f"{tv.SIGLA[met]} da transmissora · colunas agrupadas"):
         Jt = J.assign(t=J["data"].dt.to_period("Q").dt.to_timestamp() if longo else J["mes"])
         piv = Jt.pivot_table(index="t", columns="transmissora", values="valor", aggfunc="mean")
+        piv = piv.reindex(pd.date_range(piv.index.min(), piv.index.max(), freq="QS" if longo else "MS"))   # todos os períodos, em ordem
         rot_t = (lambda m: f"{(m.month - 1) // 3 + 1}T{str(m.year)[2:]}") if longo else rot_mes
         fig = go.Figure()
         for e in [x for x in futebol.EMISSORAS if x in piv.columns]:
             fig.add_bar(x=[rot_t(m) for m in piv.index], y=piv[e].values, name=e, marker_color=COR_FUT.get(e, CINZA),
                         hovertemplate=f"<b>{e}</b> · %{{x}}: %{{y:.2f}}{suf}<extra></extra>")
         layout(fig, 320, legenda=True).update_layout(barmode="group", bargap=.2, bargroupgap=.05)
-        fig.update_xaxes(tickangle=-45 if len(piv) > 8 else 0, tickfont=dict(size=10))
+        fig.update_xaxes(tickangle=-45 if len(piv) > 8 else 0, tickfont=dict(size=10), type="category",
+                         categoryorder="array", categoryarray=[rot_t(m) for m in piv.index])
         st.plotly_chart(fig, config=CFG, key="fu_mes_emis")
 
     # ---- 4. partidas (as tabelas do BI, em estilo de classificação)
@@ -3744,11 +3784,38 @@ def janela_pdf():
                       unsafe_allow_html=True)
 
 
+@_dialogo("Gráfico ampliado")
+def janela_zoom(chave):
+    import copy
+    st.session_state["_em_dialogo"] = True
+    g = next((x for x in st.session_state.get("_graf", []) if x["chave"] == chave), None)
+    if g is None:
+        st.info("Este gráfico não está mais na tela. Feche a janela e clique de novo no botão do gráfico.")
+        st.session_state["_em_dialogo"] = False
+        return
+    st.markdown(f'<div class="vt" style="font-size:1.05rem">{html_esc(g["titulo"])}</div>'
+                + (f'<div class="vs">{html_esc(g["sub"])}</div>' if g["sub"] else ""), unsafe_allow_html=True)
+    fig = copy.deepcopy(g["fig"])
+    fig.update_layout(height=max(560, (fig.layout.height or 300) * 1.6), margin=dict(l=10, r=20, t=40, b=10))
+    nome = re.sub(r"[^a-z0-9]+", "_", g["titulo"].lower())[:40].strip("_") or "grafico"
+    st.plotly_chart(fig, key=f"dlg_zoom_{chave}", config={
+        "displayModeBar": True, "displaylogo": False,
+        "modeBarButtonsToRemove": ["lasso2d", "select2d", "autoScale2d", "toggleSpikelines"],
+        "toImageButtonOptions": {"format": "png", "filename": nome, "scale": 2}})
+    st.markdown('<div class="vs">Passe o mouse no gráfico: o ícone de câmera, no canto, baixa a imagem em PNG. '
+                'Dá para dar zoom arrastando e voltar com um duplo clique.</div>', unsafe_allow_html=True)
+    st.session_state["_em_dialogo"] = False
+
+
+_z = st.session_state.pop("_zoom", None)
+if _z:
+    janela_zoom(_z)
+
 if st.session_state.pop("_abrir_pdf", False):
     st.session_state.pop("_pdf_bytes", None)
     janela_pdf()
 
-VERSAO_PAINEL = "26/11/2026 · Labs · jogos em duas emissoras destacados, só a aba aberta é calculada"
+VERSAO_PAINEL = "27/11/2026 · Labs · expandir todos os gráficos, checagem de versão dos arquivos"
 st.session_state["_aba_atual"] = ""          # o que vem depois (rodapé, atualização) não entra no relatório
 _rodape = st.container(key="notas")
 with _rodape, st.expander("🧩 Visualizações da tela inicial"):
@@ -3912,8 +3979,8 @@ def _config_ia():
         except Exception:                 # sem arquivo de secrets
             v = None
         return v or os.environ.get(nome)
-    return (ler("GEMINI_API_KEY"), ler("GEMINI_MODELO") or chat.MODELO_PADRAO,
-            ler("GEMINI_MODELO_RESERVA") or chat.MODELO_RESERVA)
+    return (ler("GEMINI_API_KEY"), ler("GEMINI_MODELO") or getattr(chat, "MODELO_PADRAO", "gemini-3.5-flash"),
+            ler("GEMINI_MODELO_RESERVA") or getattr(chat, "MODELO_RESERVA", "gemini-3.5-flash-lite"))
 
 
 CHAT_CHAVE, CHAT_MODELO, CHAT_RESERVA = _config_ia()
