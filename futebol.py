@@ -10,6 +10,8 @@ o valor dela é o "Reference:" quando ela transmite (a mesma regra das medidas d
 • `modelo_xlsx()` gera a planilha modelo; `mesclar()` junta com o que existe; `gera_demo()` cria jogos FICTÍCIOS.
 • Formato interno (longo): uma linha por jogo × métrica × emissora (COLUNAS).
 """
+
+VERSAO_MODULO = "27/11/2026"           # o streamlit_app.py confere: arquivos da mesma entrega têm a mesma versão
 import io
 import re
 import unicodedata
@@ -177,7 +179,7 @@ def ler_planilha(arquivo, nome=None):
             fora.setdefault(k, set()).update(v)
     if not achou:
         return pd.DataFrame(columns=COLUNAS), ["Não encontrei o cabeçalho do BI (Detalhe, Emissora Transmissora…) em nenhuma aba."]
-    out = pd.DataFrame(linhas, columns=COLUNAS)
+    out = normaliza_partidas(pd.DataFrame(linhas, columns=COLUNAS))
     if fora:
         tot = len(set().union(*fora.values()))
         avisos.append(f"{tot} linha(s) sem quadro reconhecido ficaram de fora.")
@@ -207,6 +209,30 @@ def mesclar(atual, novo):
 
 def ler_csv(caminho):
     return pd.read_csv(caminho, parse_dates=["data"], dtype={"hora_inicio": str, "hora_fim": str}).reindex(columns=COLUNAS)
+
+
+_SUFIXOS = {"TV Bahia (Globo)": ("GLOBO", "TV BAHIA"), "Record": ("RECORD",), "SBT": ("SBT",), "Band": ("BAND", "TV BAND"),
+            "TVE Bahia": ("TVE", "TVE BAHIA")}
+
+
+def limpa_sufixo(partida, transmissora):
+    """'BRASIL X MARROCOS (SBT)' transmitido pelo SBT -> 'BRASIL X MARROCOS'. A planilha convertida para a versão anterior do
+    painel marcava assim a 2ª emissora de um jogo simultâneo; com a versão atual (que já separa as transmissoras), o sufixo
+    sai e a transmissão volta a ser a mesma da exportação original do Instar (sem duplicar)."""
+    p = str(partida)
+    m = re.search(r"\s*\(([^()]+)\)\s*$", p)
+    if m and _sa(m.group(1)) in _SUFIXOS.get(transmissora, ()):
+        return p[:m.start()].strip()
+    return p
+
+
+def normaliza_partidas(df):
+    """Aplica limpa_sufixo em toda a base e tira as linhas que ficarem repetidas (vale a última)."""
+    if df is None or df.empty or "partida" not in df:
+        return df
+    d = df.copy()
+    d["partida"] = [limpa_sufixo(p, t) for p, t in zip(d["partida"], d["transmissora"])]
+    return d.drop_duplicates(CHAVE, keep="last").reset_index(drop=True)
 
 
 def jogos(df, metrica):
