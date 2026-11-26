@@ -8,6 +8,8 @@ Planilha (formato longo, uma linha por mês × recorte × emissora):  Mês | Rec
 • `ler_planilha()` lê e valida; `mesclar()` junta com o que já existe (mês+recorte+emissora repetidos são substituídos).
 • `gera_demo()` cria concorrentes FICTÍCIOS coerentes com a base da TV Bahia (só para a demonstração e os testes).
 """
+
+VERSAO_MODULO = "27/11/2026"           # o streamlit_app.py confere: arquivos da mesma entrega têm a mesma versão
 import io
 import re
 import unicodedata
